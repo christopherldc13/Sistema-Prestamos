@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String?
+  email     String   @unique
+  password  String
+  role      String   @default("user") // "admin" or "user"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  fullName    String
+  idNumber    String   @unique
+  phone       String
+  address     String
+  email       String?
+  loans       Loan[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Loan {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  amount        Float
+  interestRate  Float
+  status        String    @default("active") // "active", "paid", "overdue"
+  term          Int       // number of units (days/weeks/months)
+  termUnit      String    // "days", "weeks", "months"
+  interestType  String    // "simple", "compound"
+  startDate     DateTime  @default(now())
+  totalToPay    Float
+  remainingBalance Float
+  clientId      String    @db.ObjectId
+  client        Client    @relation(fields: [clientId], references: [id])
+  payments      Payment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Payment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount      Float
+  date        DateTime @default(now())
+  method      String   // "cash", "transfer", etc.
+  loanId      String   @db.ObjectId
+  loan        Loan     @relation(fields: [loanId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
