@@ -1,29 +1,31 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { hash } from "bcryptjs";
 
 export async function GET() {
     try {
-        const userCount = await prisma.user.count();
+        const hashedPassword = await hash("admin", 12);
 
-        if (userCount > 0) {
-            return NextResponse.json({ message: "El sistema ya tiene usuarios registrados." });
-        }
-
-        const admin = await prisma.user.create({
-            data: {
-                email: "admin@lumina.com",
-                password: "admin", // En producción usa bcrypt
-                name: "Admin Lumina",
+        const admin = await prisma.user.upsert({
+            where: { email: "admin@usuario.com" },
+            update: {
+                password: hashedPassword,
+                role: "admin",
+            },
+            create: {
+                email: "admin@usuario.com",
+                password: hashedPassword,
+                name: "Admin Sistema",
                 role: "admin",
             },
         });
 
         return NextResponse.json({
-            message: "Admin creado con éxito",
+            message: "Admin actualizado con contraseña bcrypt",
             user: { email: admin.email, password: "admin" }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Setup error:", error);
-        return NextResponse.json({ error: "Error en la inicialización" }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
