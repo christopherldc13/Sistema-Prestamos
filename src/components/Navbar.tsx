@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { LogOut, User, LayoutDashboard, Users, CreditCard, BarChart3, Menu, X } from "lucide-react";
+import { LogOut, User, LayoutDashboard, Users, CreditCard, BarChart3, Menu, X, Settings } from "lucide-react";
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -40,6 +40,11 @@ export function Navbar() {
           <li>
             <Link href="/reports">
               <BarChart3 size={18} /> Reportes
+            </Link>
+          </li>
+          <li>
+            <Link href="/settings">
+              <Settings size={18} /> Configuración
             </Link>
           </li>
         </ul>
@@ -83,6 +88,11 @@ export function Navbar() {
             <li>
               <Link href="/reports" onClick={toggleMenu}>
                 <BarChart3 size={20} /> Reportes
+              </Link>
+            </li>
+            <li>
+              <Link href="/settings" onClick={toggleMenu}>
+                <Settings size={20} /> Configuración
               </Link>
             </li>
             <li className="mobile-user-row">

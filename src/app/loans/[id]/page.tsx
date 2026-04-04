@@ -10,13 +10,14 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { generateLoanReceipt, generatePaymentReceipt } from "@/lib/pdf-generator";
+import { generateLoanReceipt, generatePaymentReceipt, CompanyConfig } from "@/lib/pdf-generator";
 
 
 export default function LoanDetailsPage() {
     const params = useParams();
     const { data: session } = useSession();
     const [loan, setLoan] = useState<any>(null);
+    const [companyConfig, setCompanyConfig] = useState<CompanyConfig | undefined>(undefined);
 
     const [loading, setLoading] = useState(true);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -39,8 +40,19 @@ export default function LoanDetailsPage() {
         finally { setLoading(false); }
     };
 
+    const fetchCompanyConfig = async () => {
+        try {
+            const res = await fetch("/api/settings");
+            const data = await res.json();
+            if (!data.error) setCompanyConfig(data);
+        } catch (e) { console.error(e); }
+    };
+
     useEffect(() => {
-        if (params.id) fetchLoanData();
+        if (params.id) {
+            fetchLoanData();
+            fetchCompanyConfig();
+        }
     }, [params.id]);
 
     const handlePayment = async (e: React.FormEvent) => {
@@ -61,7 +73,7 @@ export default function LoanDetailsPage() {
                 setIsPaymentModalOpen(false);
                 setPaymentForm({ ...paymentForm, amount: "" });
                 await fetchLoanData();
-                generatePaymentReceipt(data.payment, { ...loan, remainingBalance: data.updatedLoan.remainingBalance }, session?.user?.name || "Administrador");
+                generatePaymentReceipt(data.payment, { ...loan, remainingBalance: data.updatedLoan.remainingBalance }, session?.user?.name || "Administrador", companyConfig);
             } else {
 
                 const err = await res.json();
@@ -142,7 +154,7 @@ export default function LoanDetailsPage() {
                             <PlusCircle size={18} />
                             <span>Registrar Abono</span>
                         </button>
-                        <button className="btn-download-pro" onClick={() => generateLoanReceipt(loan)}>
+                        <button className="btn-download-pro" onClick={() => generateLoanReceipt(loan, companyConfig)}>
                             <Download size={18} />
                             <span>Contrato PDF</span>
                         </button>
@@ -177,7 +189,7 @@ export default function LoanDetailsPage() {
                 </motion.aside>
             </div>
 
-            {/* Payment History */}
+            {/* Payment History Section */}
             <section className="history-section-pro">
                 <header className="history-header">
                     <div className="h-title-group">
@@ -187,7 +199,8 @@ export default function LoanDetailsPage() {
                     <span className="h-count">{loan.payments.length} Registros</span>
                 </header>
 
-                <div className="glass-card history-container-glass">
+                {/* Desktop Table View */}
+                <div className="glass-card history-container-glass desktop-only-table">
                     <table className="pro-table-alt">
                         <thead>
                             <tr>
@@ -214,12 +227,11 @@ export default function LoanDetailsPage() {
                                             <span className="method-tag">{p.method.toUpperCase()}</span>
                                         </td>
                                         <td className="text-right">
-                                            <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador")}>
+                                            <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
                                                 <Download size={14} />
                                                 <span>Recibo</span>
                                             </button>
                                         </td>
-
                                     </tr>
                                 ))
                             ) : (
@@ -234,6 +246,40 @@ export default function LoanDetailsPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="mobile-only-cards">
+                    {loan.payments.length > 0 ? (
+                        loan.payments.map((p: any) => (
+                            <motion.div 
+                                key={p.id} 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="glass-card payment-mobile-card"
+                            >
+                                <div className="p-m-top">
+                                    <div className="p-m-date">
+                                        <Calendar size={12} />
+                                        <span>{new Date(p.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                                    </div>
+                                    <span className="method-tag">{p.method.toUpperCase()}</span>
+                                </div>
+                                <div className="p-m-main">
+                                    <span className="amount-pigo">+${p.amount.toLocaleString()}</span>
+                                    <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
+                                        <Download size={14} />
+                                        <span>Recibo</span>
+                                    </button>
+                                </div>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="glass-card empty-state-mobile">
+                            <CreditCard size={24} className="dim" />
+                            <p>No hay abonos registrados.</p>
+                        </div>
+                    )}
                 </div>
             </section>
 
@@ -441,15 +487,40 @@ export default function LoanDetailsPage() {
 
         .btn-back-error { background: #6366f1; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; margin-top: 2rem; }
 
+        /* Responsive Adjustments */
+        .desktop-only-table { display: block; }
+        .mobile-only-cards { display: none; }
+
         @media (max-width: 1024px) {
           .dashboard-grid { grid-template-columns: 1fr; }
           .balance-summary-card { order: -1; }
+          .loan-profile-wrapper { padding: 0 1rem 5rem; }
         }
-        @media (max-width: 640px) {
-          .client-name-title { font-size: 1.5rem; }
-          .main-actions-pro { flex-direction: column; }
-          .form-row-modal { grid-template-columns: 1fr; }
+
+        @media (max-width: 768px) {
+          .desktop-only-table { display: none; }
+          .mobile-only-cards { display: flex; flex-direction: column; gap: 1rem; }
+          
+          .payment-mobile-card { padding: 1.25rem; }
+          .p-m-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+          .p-m-date { display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.8rem; font-weight: 700; }
+          .p-m-main { display: flex; justify-content: space-between; align-items: center; }
+          
+          .empty-state-mobile { padding: 3rem; text-align: center; color: #475569; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+          
           .main-control-card { padding: 1.5rem; }
+          .client-name-title { font-size: 1.5rem; line-height: 1.2; }
+          .h-title-group h2 { font-size: 1.25rem; }
+          
+          .b-value-big { font-size: 1.75rem; }
+          .balance-rows { gap: 1rem; }
+        }
+
+        @media (max-width: 480px) {
+          .main-actions-pro { flex-direction: column; width: 100%; }
+          .btn-pay-pro, .btn-download-pro { width: 100%; justify-content: center; }
+          .modal-content-premium { padding: 1.5rem; }
+          .form-row-modal { grid-template-columns: 1fr; }
         }
       `}} />
         </div>
