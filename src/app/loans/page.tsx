@@ -151,7 +151,9 @@ export default function LoansPage() {
                                                     {loan.status === 'active' && <Clock size={12} />}
                                                     {loan.status === 'paid' && <CheckCircle2 size={12} />}
                                                     {loan.status === 'overdue' && <AlertCircle size={12} />}
-                                                    {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
+                                                    {loan.status === 'active' ? 'Activo' : 
+                                                     loan.status === 'paid' ? 'Pagado' : 
+                                                     loan.status === 'overdue' ? 'Vencido' : loan.status}
                                                 </span>
                                             </td>
                                             <td className="text-right">

@@ -126,7 +126,11 @@ export default function LoanDetailsPage() {
                             {loan.status === 'active' && <Clock size={14} />}
                             {loan.status === 'paid' && <CheckCircle2 size={14} />}
                             {loan.status === 'overdue' && <AlertCircle size={14} />}
-                            <span>{loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}</span>
+                            <span>
+                                {loan.status === 'active' ? 'Activo' : 
+                                 loan.status === 'paid' ? 'Pagado' : 
+                                 loan.status === 'overdue' ? 'Vencido' : loan.status}
+                            </span>
                         </div>
                     </header>
 

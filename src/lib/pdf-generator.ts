@@ -69,9 +69,7 @@ const kv = (
 };
 
 // ── Generate zero-padded sequential-looking code from timestamp ──
-// Uses last 7 digits of a numeric hash derived from the ID string
 const seqNo = (prefix: string, id: string) => {
-    // Convert MongoDB hex ObjectId to a short stable number
     let num = 0;
     for (let i = 0; i < id.length; i++) {
         num = (num * 31 + id.charCodeAt(i)) >>> 0;
@@ -81,66 +79,143 @@ const seqNo = (prefix: string, id: string) => {
 };
 
 // ============================================================
-//  LOAN CONTRACT PDF (full A4)
+//  LOAN CONTRACT PDF (Legal Narrative - A4)
 // ============================================================
 export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_COMPANY) => {
     const doc = new jsPDF();
-    const date = new Date(loan.startDate).toLocaleDateString("es-ES", {
+    const dateStamp = new Date().toLocaleDateString("es-ES", {
         day: "2-digit",
         month: "long",
-        year: "numeric",
+        year: "numeric"
     });
 
-    // Header banner
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 40, "F");
+    // Page Settings (A4 = 210mm x 297mm)
+    const L = 25; // Margen izquierdo
+    const R = 185; // Margen derecho 
+    const CW = R - L; // Ancho efectivo del contenido
+    let y = 25;
 
-    doc.setFontSize(26);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.text(config.brand, 20, 25);
+    // ── Font Setup ───────────────────────────────────────────
+    doc.setFont("times", "normal");
 
+    // ── Header (Centered) ────────────────────────────────────
+    doc.setFontSize(18);
+    doc.setFont("times", "bold");
+    doc.text(config.name.toUpperCase(), 105, y, { align: "center" });
+    
+    y += 8;
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("CONTRATO OFICIAL DE FINANCIAMIENTO", 20, 32);
+    doc.setFont("times", "italic");
+    doc.text(config.slogan.toUpperCase(), 105, y, { align: "center" });
 
+    y += 5;
+    doc.setFont("times", "normal");
     doc.setFontSize(9);
-    doc.text(`FECHA: ${date}`, 190, 25, { align: "right" });
-    doc.text(
-        `FOLIO: ${seqNo("PR", loan.id)}`,
-        190, 31, { align: "right" }
-    );
+    doc.text(`${config.address} | ${config.phone}`, 105, y, { align: "center" });
 
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("DECLARACIONES DEL CRÉDITO", 20, 55);
+    y += 8;
+    doc.setLineWidth(0.5);
+    doc.line(L, y, R, y);
 
-    (doc as any).autoTable({
-        startY: 60,
-        head: [["PARÁMETRO", "VALOR ACORDADO"]],
-        body: [
-            ["Prestatario", loan.client.fullName],
-            ["Identificación", loan.client.idNumber],
-            ["Dirección", loan.client.address || "—"],
-            ["Teléfono", loan.client.phone || "—"],
-            ["Monto Capital", `RD$${fmt(loan.amount)}`],
-            ["Tasa de Interés", `${loan.interestRate}% (${loan.interestType === "simple" ? "Simple" : "Compuesto"})`],
-            ["Plazo Pactado", `${loan.term} ${loan.termUnit === "months" ? "Meses" : loan.termUnit === "weeks" ? "Semanas" : "Días"}`],
-            ["Fecha Apertura", new Date(loan.startDate).toLocaleDateString("es-ES")],
-            ["Total a Pagar", `RD$${fmt(loan.totalToPay)}`],
-        ],
-        theme: "striped",
-        headStyles: { fillColor: [15, 23, 42] },
-        styles: { cellPadding: 5 },
+    // ── Title ────────────────────────────────────────────────
+    y += 18;
+    doc.setFontSize(14);
+    doc.setFont("times", "bold");
+    doc.text("CONTRATO DE PRÉSTAMO Y RECONOCIMIENTO DE DEUDA", 105, y, { align: "center" });
+
+    y += 15;
+    doc.setFontSize(11); 
+    doc.setFont("times", "normal");
+
+    // ── Narrative Text ───────────────────────────────────────
+    const introText = [
+        `ENTRE: De una parte, el Señor/a ${config.name.toUpperCase()}, dominicano/a, mayor de edad, con domicilio en ${config.address}, quien en lo que sigue de este contrato se le denominará LA ACREEDORA.`,
+        `Y DE LA OTRA PARTE, el Señor/a ${loan.client.fullName.toUpperCase()}, dominicano/a, mayor de edad, portador/a de la cédula de identidad No. ${loan.client.idNumber}, con domicilio en ${loan.client.address || "Principal"}, quien en adelante se denominará EL DEUDOR.`,
+        "SE HA CONVENIDO Y PACTADO LO SIGUIENTE:"
+    ];
+
+    doc.setLineHeightFactor(1.4); 
+
+    introText.forEach((p) => {
+        doc.text(p, L, y, { 
+            align: "justify", 
+            maxWidth: CW 
+        });
+        
+        const lines = doc.splitTextToSize(p, CW);
+        y += (lines.length * 6.5) + 4;
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 30;
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Certificación electrónica ${config.brand}. Documento válido en plataforma.`, 105, finalY, { align: "center" });
+    // ── Clauses ──────────────────────────────────────────────
+    const clauses = [
+        {
+            title: "PRIMERA: OBJETO DEL CONTRATO.",
+            text: `LA ACREEDORA entrega en este acto a favor de EL DEUDOR, quien lo recibe a su entera satisfacción, la suma de RD$${fmt(loan.amount)} (Pesos Dominicanos), en calidad de préstamo de capital.`
+        },
+        {
+            title: "SEGUNDA: INTERESES Y CUOTAS.",
+            text: `Las partes convienen que el capital prestado devengará una tasa de interés del ${loan.interestRate}% por periodo de pago. EL DEUDOR pagará cuotas fijas de RD$${fmt(loan.totalToPay / (loan.term || 1))}, incluyendo capital e intereses, sumando un total de RD$${fmt(loan.totalToPay)}.`
+        },
+        {
+            title: "TERCERA: PLAZO.",
+            text: `El presente contrato tendrá una duración de ${loan.term} ${loan.termUnit === "months" ? "Meses" : loan.termUnit === "weeks" ? "Semanas" : "Días"}, a partir de la firma del presente instrumento.`
+        },
+        {
+            title: "CUARTA: MORA.",
+            text: "En caso de retraso en el pago de las cuotas acordadas, EL DEUDOR pagará un recargo por mora del 5% por cada periodo vencido."
+        },
+        {
+            title: "QUINTA: GARANTÍA.",
+            text: "EL DEUDOR garantiza el cumplimiento de sus obligaciones con la totalidad de sus bienes presentes y futuros, renunciando a cualquier fuero legal."
+        }
+    ];
 
-    doc.save(`FactPrest_Contrato_${loan.client.idNumber}.pdf`);
+    clauses.forEach(c => {
+        if (y > 255) { doc.addPage(); y = 25; }
+        doc.setFont("times", "bold");
+        doc.text(c.title, L, y);
+        y += 7;
+        doc.setFont("times", "normal");
+        
+        doc.text(c.text, L, y, { 
+            align: "justify", 
+            maxWidth: CW 
+        });
+        
+        const lines = doc.splitTextToSize(c.text, CW);
+        y += (lines.length * 6.5) + 8;
+    });
+
+    // ── Footer Date ──────────────────────────────────────────
+    if (y > 240) { doc.addPage(); y = 25; }
+    y += 5;
+    doc.text(`Hecho y firmado en la ciudad de la República Dominicana, a los ${dateStamp}.`, L, y);
+
+    // ── Signatures ───────────────────────────────────────────
+    y += 35;
+    doc.setLineWidth(0.3);
+    
+    // Acreedora
+    doc.line(L, y, L + 65, y);
+    doc.setFont("times", "bold");
+    doc.setFontSize(10);
+    doc.text(config.name.toUpperCase(), L + 32.5, y + 5, { align: "center" });
+    doc.setFont("times", "normal");
+    doc.text("LA ACREEDORA", L + 32.5, y + 10, { align: "center" });
+
+    // Deudor
+    doc.line(R - 65, y, R, y);
+    doc.setFont("times", "bold");
+    doc.text(loan.client.fullName.toUpperCase(), R - 32.5, y + 5, { align: "center" });
+    doc.setFont("times", "normal");
+    doc.text("EL DEUDOR", R - 32.5, y + 10, { align: "center" });
+
+    // Folio
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`${seqNo("PR", loan.id)} | Facturado por Fact-Prest`, 105, 285, { align: "center" });
+
+    doc.save(`Contrato_${loan.client.fullName.replace(/\s+/g, '_')}.pdf`);
 };
 
 // ============================================================
@@ -184,15 +259,12 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     const balanceAfter = Math.max(0, prevCapitalBalance - payment.amount);
 
     // ── Breakdown: distribute payment proportionally using real DB values ──
-    // Capital total = loan.amount (principal from DB)
-    // Interest total = loan.totalToPay - loan.amount (derived from DB fields)
-    const principalDB = loan.amount;                        // e.g. 25,000
-    const interestDB  = loan.totalToPay - loan.amount;      // e.g. 10,000
-    const totalDB     = loan.totalToPay;                    // e.g. 35,000
+    const principalDB = loan.amount;                        
+    const interestDB  = loan.totalToPay - loan.amount;      
+    const totalDB     = loan.totalToPay;                    
 
-    // Each peso paid allocates capital and interest proportionally
     const capitalPart  = parseFloat((payment.amount * (principalDB / totalDB)).toFixed(2));
-    const interestPart = parseFloat((payment.amount - capitalPart).toFixed(2));  // ensures sum = payment.amount exactly
+    const interestPart = parseFloat((payment.amount - capitalPart).toFixed(2));  
 
     // ── Sequential-style receipt & loan numbers ───────────────
     const receiptNo = seqNo("IN", payment.id);
@@ -207,20 +279,18 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     };
     const methodDisplay = methodLabel[payment.method] || payment.method.toUpperCase();
 
-    let y = 0;
+    let y = 12;
 
     // ═══════════════════════════════════════════════════════
     //  LOGO / HEADER
     // ═══════════════════════════════════════════════════════
-    y = 12;
     doc.setFont("helvetica", "bold");
     
-    // Brand name as logo (simulating Crediza style)
     const brandText = config.brand.toUpperCase();
     const brandFontSize = brandText.length > 15 ? 14 : 22;
     
     doc.setFontSize(brandFontSize);
-    doc.setTextColor(40, 20, 100); // Dark purple/blue tint
+    doc.setTextColor(40, 20, 100); 
     doc.text(brandText, MID, y, { align: "center" });
 
     y += 8;
@@ -244,7 +314,7 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     solidLine(doc, y, 0.1);
 
     // ═══════════════════════════════════════════════════════
-    //  META INFO (Aligned rows)
+    //  META INFO
     // ═══════════════════════════════════════════════════════
     y += 5;
     doc.setFontSize(8);
@@ -295,7 +365,6 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     y += 5;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    // Spaced out text as in image
     doc.text("P   A   G   O      D   E      C   U   O   T   A", MID, y, { align: "center" });
 
     y += 3;
@@ -318,7 +387,7 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     y += 3;
     solidLine(doc, y, 0.2);
 
-    // ── TOTAL PAGADO WITH DOUBLE UNDERLINE ──────────────────
+    // ── TOTAL PAGADO WITH DOUBLE UNDERLINE
     y += 6;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -328,7 +397,6 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     const totalStr = fmt(payment.amount);
     doc.text(totalStr, MARGIN_R, y, { align: "right" });
 
-    // Measure thickness for double underline
     const textWidth = doc.getTextWidth(totalStr);
     y += 1.5;
     doc.setDrawColor(0, 0, 0);
@@ -337,12 +405,11 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     y += 0.8;
     doc.line(MARGIN_R - textWidth, y, MARGIN_R, y);
 
-    // ── Forma de Pago ───────────────────────────────────────
+    // ── Forma de Pago
     y += 8;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.text("Forma de Pago:", MARGIN_L, y);
-    // Small underline for title only
     const fpWidth = doc.getTextWidth("Forma de Pago:");
     doc.line(MARGIN_L, y + 0.8, MARGIN_L + fpWidth + 20, y + 0.8);
 
@@ -353,7 +420,7 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     solidLine(doc, y, 0.1);
 
     // ═══════════════════════════════════════════════════════
-    //  BALANCES (All bold values/keys as in Crediza)
+    //  BALANCES
     // ═══════════════════════════════════════════════════════
     y += 8;
     doc.setFontSize(9);
@@ -393,10 +460,6 @@ export const generatePaymentReceipt = (payment: any, loan: any, processedBy?: st
     doc.text("Generado por Fact-Prest", MID, y, { align: "center" });
 
     y += 4;
-    doc.text("Este ticket respalda su movimiento administrativo.", MID, y, { align: "center" });
-
-    y += 5;
-
     doc.text("Este ticket respalda su movimiento administrativo.", MID, y, { align: "center" });
 
     doc.save(`FactPrest_Recibo_${receiptNo}.pdf`);
