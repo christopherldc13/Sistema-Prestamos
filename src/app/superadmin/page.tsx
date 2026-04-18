@@ -3,457 +3,584 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ShieldCheck, UserPlus, Power, CheckCircle, Ban } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+    ShieldCheck, UserPlus, CheckCircle, Ban, Users,
+    DollarSign, AlertTriangle, KeyRound, X, Calendar, Phone, Search,
+    Building2, TrendingUp, Clock, Trash2
+} from "lucide-react";
+
+interface UserStats {
+    clients: number;
+    loans: number;
+    activeLoans: number;
+    overdueLoans: number;
+    portfolio: number;
+    pendingBalance: number;
+}
+
+interface AdminUser {
+    id: string;
+    name?: string;
+    email: string;
+    phone?: string;
+    role: string;
+    isActive: boolean;
+    licenseExpiresAt?: string;
+    createdAt: string;
+    stats: UserStats;
+}
+
+interface GlobalStats {
+    totalAdmins: number;
+    activeAdmins: number;
+    inactiveAdmins: number;
+    totalClients: number;
+    totalLoans: number;
+    activeLoans: number;
+    overdueLoans: number;
+    totalPortfolio: number;
+    pendingBalance: number;
+    expiringCount: number;
+    expiredCount: number;
+}
+
+type ModalType = "create" | "resetPassword" | "editLicense" | null;
+
+function getLicenseStatus(expiresAt?: string) {
+    if (!expiresAt) return "none";
+    const now = new Date();
+    const exp = new Date(expiresAt);
+    const diff = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    if (diff < 0) return "expired";
+    if (diff <= 30) return "expiring";
+    return "active";
+}
 
 export default function SuperadminDashboard() {
     const { data: session, status } = useSession();
     const router = useRouter();
-    const [users, setUsers] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
 
-    const [form, setForm] = useState({ name: "", email: "", password: "", role: "admin" });
-    const [msg, setMsg] = useState("");
+    const [users, setUsers] = useState<AdminUser[]>([]);
+    const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+
+    const [modal, setModal] = useState<ModalType>(null);
+    const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+    const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+    const [createForm, setCreateForm] = useState({
+        name: "", email: "", password: "", phone: "",
+        licenseExpiresAt: "", role: "admin"
+    });
+    const [resetPassword, setResetPassword] = useState("");
+    const [newExpiry, setNewExpiry] = useState("");
 
     useEffect(() => {
         if (status === "unauthenticated") router.push("/login");
-        if (session && (session.user as any).role !== "superadmin") {
-            router.push("/");
-        }
+        if (session && (session.user as any).role !== "superadmin") router.push("/");
         if (session && (session.user as any).role === "superadmin") {
-            fetchUsers();
+            fetchAll();
         }
     }, [session, status, router]);
 
-    const fetchUsers = async () => {
-        const res = await fetch("/api/superadmin/users");
-        if (res.ok) {
-            const data = await res.json();
-            setUsers(data);
-        }
+    const fetchAll = async () => {
+        setLoading(true);
+        const [usersRes, statsRes] = await Promise.all([
+            fetch("/api/superadmin/users"),
+            fetch("/api/superadmin/stats"),
+        ]);
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (statsRes.ok) setGlobalStats(await statsRes.json());
         setLoading(false);
     };
 
-    const toggleStatus = async (id: string, currentStatus: boolean) => {
-        await fetch(`/api/superadmin/users/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ isActive: !currentStatus })
-        });
-        fetchUsers();
+    const showMsg = (text: string, type: "success" | "error" = "success") => {
+        setMsg({ text, type });
+        setTimeout(() => setMsg(null), 3500);
     };
 
-    const createUser = async (e: React.FormEvent) => {
+    const toggleStatus = async (u: AdminUser) => {
+        await fetch(`/api/superadmin/users/${u.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isActive: !u.isActive }),
+        });
+        showMsg(u.isActive ? `"${u.name}" suspendido` : `"${u.name}" reactivado`);
+        fetchAll();
+    };
+
+    const deleteUser = async (u: AdminUser) => {
+        if (!confirm(`¿Eliminar permanentemente a "${u.name || u.email}"? Esta acción no se puede deshacer.`)) return;
+        const res = await fetch(`/api/superadmin/users/${u.id}`, { method: "DELETE" });
+        if (res.ok) { showMsg("Usuario eliminado"); fetchAll(); }
+        else { const d = await res.json(); showMsg(d.error || "Error eliminando", "error"); }
+    };
+
+    const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         const res = await fetch("/api/superadmin/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(form)
+            body: JSON.stringify(createForm),
         });
         if (res.ok) {
-            setMsg("Usuario creado exitosamente");
-            setForm({ name: "", email: "", password: "", role: "admin" });
-            fetchUsers();
+            showMsg("Licencia creada exitosamente");
+            setCreateForm({ name: "", email: "", password: "", phone: "", licenseExpiresAt: "", role: "admin" });
+            setModal(null);
+            fetchAll();
         } else {
-            const data = await res.json();
-            setMsg(data.error || "Error creando usuario");
+            const d = await res.json();
+            showMsg(d.error || "Error creando licencia", "error");
         }
-        setTimeout(() => setMsg(""), 3000);
     };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+        const res = await fetch(`/api/superadmin/users/${selectedUser.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newPassword: resetPassword }),
+        });
+        if (res.ok) {
+            showMsg("Contraseña restablecida correctamente");
+            setModal(null); setResetPassword("");
+        } else {
+            showMsg("Error al restablecer contraseña", "error");
+        }
+    };
+
+    const handleUpdateLicense = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+        const res = await fetch(`/api/superadmin/users/${selectedUser.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ licenseExpiresAt: newExpiry || null }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg("Licencia actualizada");
+            setModal(null); fetchAll();
+        } else if (res.status === 422) {
+            showMsg("Corre 'npx prisma generate && npx prisma db push' para activar licencias", "error");
+        } else {
+            showMsg(data.error || "Error al actualizar licencia", "error");
+        }
+    };
+
+    const filtered = users
+        .filter(u => filterStatus === "all" ? true : filterStatus === "active" ? u.isActive : !u.isActive)
+        .filter(u =>
+            (u.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
     if (loading || status === "loading") {
         return (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh", color: "white" }}>
-                <span className="loader-icon" style={{ width: 30, height: 30, border: "3px solid rgba(255,255,255,0.2)", borderTopColor: "white", borderRadius: "50%", display: "inline-block", animation: "spin 1s linear infinite" }}></span>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh" }}>
+                <div className="sa-spinner" />
             </div>
         );
     }
 
     return (
-        <div className="superadmin-wrapper">
+        <div className="sa-wrapper">
+            {/* Toast */}
+            <AnimatePresence>
+                {msg && (
+                    <motion.div
+                        className={`sa-toast ${msg.type === "error" ? "toast-error" : "toast-success"}`}
+                        initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                    >
+                        {msg.type === "error" ? <AlertTriangle size={16} /> : <CheckCircle size={16} />}
+                        {msg.text}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Header */}
             <header className="sa-header">
                 <div className="sa-title-box">
-                    <ShieldCheck size={36} color="#c084fc" />
+                    <ShieldCheck size={34} color="#c084fc" />
                     <div>
                         <h1>Panel Maestro</h1>
-                        <p>Gestión Global de Franquicias (SaaS)</p>
+                        <p>Control de licencias y franquicias SaaS</p>
                     </div>
                 </div>
+                <button className="sa-btn-new" onClick={() => setModal("create")}>
+                    <UserPlus size={18} /> Nueva Licencia
+                </button>
             </header>
 
-            <div className="sa-grid">
-                {/* Formulario Crear Instancia */}
-                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="sa-card sa-form-card">
-                    <div className="sa-card-header">
-                        <UserPlus size={20} color="#818cf8"/>
-                        <h2>Vender Nueva Licencia</h2>
-                    </div>
-                    <form onSubmit={createUser} className="sa-form">
-                        <div className="sa-form-group">
-                            <label>Nombre Comercial / Empresa</label>
-                            <input 
-                                type="text" 
-                                value={form.name} 
-                                onChange={e => setForm({...form, name: e.target.value})} 
-                                placeholder="Ej: Préstamos Express SRL" 
-                                required 
-                            />
-                        </div>
-                        <div className="sa-form-group">
-                            <label>Email de Acceso</label>
-                            <input 
-                                type="email" 
-                                value={form.email} 
-                                onChange={e => setForm({...form, email: e.target.value})} 
-                                placeholder="contacto@empresa.com" 
-                                required 
-                            />
-                        </div>
-                        <div className="sa-form-group">
-                            <label>Contraseña Maestra</label>
-                            <input 
-                                type="password" 
-                                value={form.password} 
-                                onChange={e => setForm({...form, password: e.target.value})} 
-                                placeholder="••••••••" 
-                                required 
-                            />
-                        </div>
-                        <button type="submit" className="sa-btn-primary">Crear Licencia e Inquilino</button>
-                    </form>
-                    {msg && <div className="sa-msg">{msg}</div>}
-                </motion.div>
+            {/* Global KPIs */}
+            {globalStats && (
+                <div className="sa-kpi-grid">
+                    {[
+                        { label: "Admins Activos", value: globalStats.activeAdmins, sub: `${globalStats.inactiveAdmins} suspendidos`, icon: <Users size={20} />, color: "#6366f1" },
+                        { label: "Clientes Totales", value: globalStats.totalClients, sub: "Todos los inquilinos", icon: <Building2 size={20} />, color: "#10b981" },
+                        { label: "Cartera Global", value: `$${globalStats.totalPortfolio.toLocaleString()}`, sub: `$${globalStats.pendingBalance.toLocaleString()} pendiente`, icon: <DollarSign size={20} />, color: "#a855f7" },
+                        { label: "Licencias Vencidas", value: globalStats.expiredCount, sub: `${globalStats.expiringCount} por vencer`, icon: <AlertTriangle size={20} />, color: globalStats.expiredCount > 0 ? "#ef4444" : "#64748b" },
+                    ].map((k, i) => (
+                        <motion.div key={k.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="sa-kpi-card">
+                            <div className="sa-kpi-icon" style={{ background: `${k.color}18`, color: k.color }}>{k.icon}</div>
+                            <div className="sa-kpi-body">
+                                <span className="sa-kpi-val">{k.value}</span>
+                                <span className="sa-kpi-label">{k.label}</span>
+                                <span className="sa-kpi-sub">{k.sub}</span>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
-                {/* Lista de Inquilinos */}
-                <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="sa-card sa-table-card">
-                    <div className="sa-card-header">
-                        <h2>Inquilinos Activos ({users.length})</h2>
-                    </div>
-                    <div className="sa-table-responsive">
-                        <table className="sa-table">
-                            <thead>
-                                <tr>
-                                    <th>Empresa</th>
-                                    <th>Email</th>
-                                    <th>Sistema Rango</th>
-                                    <th style={{ textAlign: "right" }}>Control de Suscripción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map((u: any) => (
+            {/* Filters */}
+            <div className="sa-filters">
+                <div className="sa-search-box">
+                    <Search size={16} />
+                    <input
+                        placeholder="Buscar por nombre o email..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && <button onClick={() => setSearchTerm("")}><X size={14} /></button>}
+                </div>
+                <div className="sa-filter-tabs">
+                    {(["all", "active", "inactive"] as const).map(f => (
+                        <button key={f} className={`sa-tab ${filterStatus === f ? "active" : ""}`} onClick={() => setFilterStatus(f)}>
+                            {f === "all" ? "Todos" : f === "active" ? "Activos" : "Suspendidos"}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Table */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="sa-card">
+                <div className="sa-card-header">
+                    <h2>Inquilinos ({filtered.length})</h2>
+                </div>
+                <div className="sa-table-scroll">
+                    <table className="sa-table">
+                        <thead>
+                            <tr>
+                                <th>Empresa / Admin</th>
+                                <th>Contacto</th>
+                                <th>Cartera</th>
+                                <th>Préstamos</th>
+                                <th>Licencia</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.map(u => {
+                                const licStatus = getLicenseStatus(u.licenseExpiresAt);
+                                return (
                                     <tr key={u.id}>
                                         <td data-label="Empresa">
-                                            <div className="sa-cell-main">{u.name || "Sin Nombre"}</div>
+                                            <div className="sa-cell-name">
+                                                <div className="sa-avatar" style={{ background: u.role === "superadmin" ? "rgba(168,85,247,0.15)" : "rgba(99,102,241,0.12)" }}>
+                                                    {(u.name || u.email)[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="sa-cell-main">{u.name || "Sin nombre"}</div>
+                                                    <div className="sa-cell-sub">{u.email}</div>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className="sa-cell-sub" data-label="Email">{u.email}</td>
-                                        <td data-label="Sistema Rango">
-                                            <span className={`sa-badge ${u.role === "superadmin" ? "badge-super" : "badge-admin"}`}>
-                                                {u.role.toUpperCase()}
-                                            </span>
+                                        <td data-label="Contacto">
+                                            <span className="sa-cell-sub">{u.phone || "—"}</span>
                                         </td>
-                                        <td data-label="Control" style={{ textAlign: "right" }}>
-                                            {u.role === "superadmin" ? (
-                                                <span className="sa-shield">
-                                                    <ShieldCheck size={16} /> Protegido
-                                                </span>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => toggleStatus(u.id, u.isActive)}
-                                                    className={`sa-btn-toggle ${u.isActive ? "btn-active" : "btn-suspended"}`}
-                                                >
-                                                    {u.isActive ? (
-                                                        <><CheckCircle size={14}/> ACTIVO</>
-                                                    ) : (
-                                                        <><Ban size={14}/> SUSPENDIDO</>
+                                        <td data-label="Cartera">
+                                            {u.role === "superadmin" ? <span className="sa-cell-sub">—</span> : (
+                                                <div>
+                                                    <div className="sa-cell-main">${(u.stats?.portfolio || 0).toLocaleString()}</div>
+                                                    <div className="sa-cell-sub">{u.stats?.clients || 0} clientes</div>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td data-label="Préstamos">
+                                            {u.role === "superadmin" ? <span className="sa-cell-sub">—</span> : (
+                                                <div>
+                                                    <div className="sa-cell-main">{u.stats?.loans || 0} total</div>
+                                                    {(u.stats?.overdueLoans || 0) > 0 && (
+                                                        <div className="sa-overdue-tag">{u.stats.overdueLoans} vencidos</div>
                                                     )}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td data-label="Licencia">
+                                            {u.role === "superadmin" ? (
+                                                <span className="sa-badge badge-super">Permanente</span>
+                                            ) : !u.licenseExpiresAt ? (
+                                                <button className="sa-link-btn" onClick={() => { setSelectedUser(u); setNewExpiry(""); setModal("editLicense"); }}>
+                                                    <Clock size={12} /> Sin expiración
+                                                </button>
+                                            ) : (
+                                                <button className={`sa-license-btn lic-${licStatus}`} onClick={() => { setSelectedUser(u); setNewExpiry(u.licenseExpiresAt?.split("T")[0] || ""); setModal("editLicense"); }}>
+                                                    <Calendar size={12} />
+                                                    {new Date(u.licenseExpiresAt).toLocaleDateString("es-MX")}
                                                 </button>
                                             )}
                                         </td>
+                                        <td data-label="Estado">
+                                            {u.role === "superadmin" ? (
+                                                <span className="sa-shield"><ShieldCheck size={14} /> Protegido</span>
+                                            ) : (
+                                                <button onClick={() => toggleStatus(u)} className={`sa-status-btn ${u.isActive ? "btn-active" : "btn-suspended"}`}>
+                                                    {u.isActive ? <><CheckCircle size={13} /> ACTIVO</> : <><Ban size={13} /> SUSPENDIDO</>}
+                                                </button>
+                                            )}
+                                        </td>
+                                        <td data-label="Acciones">
+                                            {u.role !== "superadmin" && (
+                                                <div className="sa-actions">
+                                                    <button className="sa-action-btn" title="Restablecer contraseña"
+                                                        onClick={() => { setSelectedUser(u); setResetPassword(""); setModal("resetPassword"); }}>
+                                                        <KeyRound size={15} />
+                                                    </button>
+                                                    <button className="sa-action-btn delete" title="Eliminar usuario" onClick={() => deleteUser(u)}>
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                );
+                            })}
+                            {filtered.length === 0 && (
+                                <tr><td colSpan={7} className="sa-empty">No hay resultados que coincidan.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </motion.div>
+
+            {/* ── Modals ── */}
+            <AnimatePresence>
+                {modal && (
+                    <div className="sa-modal-backdrop" onClick={() => setModal(null)}>
+                        <motion.div
+                            className="sa-modal glass-card"
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* CREATE */}
+                            {modal === "create" && (
+                                <>
+                                    <div className="sa-modal-header">
+                                        <div className="sa-modal-title"><UserPlus size={20} color="#818cf8" /> Vender Nueva Licencia</div>
+                                        <button className="sa-close-btn" onClick={() => setModal(null)}><X size={20} /></button>
+                                    </div>
+                                    <form onSubmit={handleCreate} className="sa-form">
+                                        <div className="sa-form-row">
+                                            <div className="sa-form-group">
+                                                <label>Nombre Comercial / Empresa</label>
+                                                <input type="text" value={createForm.name}
+                                                    onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
+                                                    placeholder="Préstamos Express SRL" required />
+                                            </div>
+                                            <div className="sa-form-group">
+                                                <label>Teléfono</label>
+                                                <input type="text" value={createForm.phone}
+                                                    onChange={e => setCreateForm({ ...createForm, phone: e.target.value })}
+                                                    placeholder="809-000-0000" />
+                                            </div>
+                                        </div>
+                                        <div className="sa-form-row">
+                                            <div className="sa-form-group">
+                                                <label>Email de Acceso</label>
+                                                <input type="email" value={createForm.email}
+                                                    onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                                                    placeholder="contacto@empresa.com" required />
+                                            </div>
+                                            <div className="sa-form-group">
+                                                <label>Contraseña Inicial</label>
+                                                <input type="password" value={createForm.password}
+                                                    onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
+                                                    placeholder="••••••••" required />
+                                            </div>
+                                        </div>
+                                        <div className="sa-form-group">
+                                            <label>Fecha de Expiración de Licencia (opcional)</label>
+                                            <input type="date" value={createForm.licenseExpiresAt}
+                                                onChange={e => setCreateForm({ ...createForm, licenseExpiresAt: e.target.value })} />
+                                        </div>
+                                        <button type="submit" className="sa-btn-primary">Crear Licencia e Inquilino</button>
+                                    </form>
+                                </>
+                            )}
+
+                            {/* RESET PASSWORD */}
+                            {modal === "resetPassword" && selectedUser && (
+                                <>
+                                    <div className="sa-modal-header">
+                                        <div className="sa-modal-title"><KeyRound size={20} color="#f59e0b" /> Restablecer Contraseña</div>
+                                        <button className="sa-close-btn" onClick={() => setModal(null)}><X size={20} /></button>
+                                    </div>
+                                    <p className="sa-modal-sub">Cambiando contraseña de <strong>{selectedUser.name || selectedUser.email}</strong></p>
+                                    <form onSubmit={handleResetPassword} className="sa-form">
+                                        <div className="sa-form-group">
+                                            <label>Nueva Contraseña</label>
+                                            <input type="password" value={resetPassword}
+                                                onChange={e => setResetPassword(e.target.value)}
+                                                placeholder="Nueva contraseña segura" minLength={6} required />
+                                        </div>
+                                        <button type="submit" className="sa-btn-warning">Restablecer Contraseña</button>
+                                    </form>
+                                </>
+                            )}
+
+                            {/* EDIT LICENSE */}
+                            {modal === "editLicense" && selectedUser && (
+                                <>
+                                    <div className="sa-modal-header">
+                                        <div className="sa-modal-title"><Calendar size={20} color="#10b981" /> Gestionar Licencia</div>
+                                        <button className="sa-close-btn" onClick={() => setModal(null)}><X size={20} /></button>
+                                    </div>
+                                    <p className="sa-modal-sub">Licencia de <strong>{selectedUser.name || selectedUser.email}</strong></p>
+                                    <form onSubmit={handleUpdateLicense} className="sa-form">
+                                        <div className="sa-form-group">
+                                            <label>Nueva Fecha de Expiración</label>
+                                            <input type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />
+                                            <span className="sa-form-hint">Dejar vacío para licencia sin expiración</span>
+                                        </div>
+                                        <button type="submit" className="sa-btn-success">Actualizar Licencia</button>
+                                    </form>
+                                </>
+                            )}
+                        </motion.div>
                     </div>
-                </motion.div>
-            </div>
+                )}
+            </AnimatePresence>
 
-            <style dangerouslySetInnerHTML={{ __html: `
-                .superadmin-wrapper {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding-bottom: 3rem;
-                    animation: fadeIn 0.4s ease-out;
-                }
-                .sa-header {
-                    margin-bottom: 2rem;
-                }
-                .sa-title-box {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                }
-                .sa-title-box h1 {
-                    font-size: 2rem;
-                    font-weight: 800;
-                    color: white;
-                    margin: 0;
-                    letter-spacing: -0.02em;
-                }
-                .sa-title-box p {
-                    color: rgba(255,255,255,0.5);
-                    font-size: 0.95rem;
-                    margin: 0;
-                }
-                
-                .sa-grid {
-                    display: grid;
-                    grid-template-columns: 1fr;
-                    gap: 1.5rem;
-                }
-                @media (min-width: 1024px) {
-                    .sa-grid { grid-template-columns: 350px 1fr; }
-                }
-
-                .sa-card {
-                    background: rgba(15, 23, 42, 0.4);
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    backdrop-filter: blur(20px);
-                    border-radius: 16px;
-                    padding: 1.5rem;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                }
-
-                .sa-card-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    margin-bottom: 1.25rem;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                    padding-bottom: 1rem;
-                }
-                .sa-card-header h2 {
-                    font-size: 1.15rem;
-                    font-weight: 600;
-                    color: white;
-                    margin: 0;
-                }
-
-                .sa-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1.25rem;
-                }
-                .sa-form-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.4rem;
-                }
-                .sa-form-group label {
-                    font-size: 0.8rem;
-                    font-weight: 500;
-                    color: rgba(255,255,255,0.6);
-                    text-transform: uppercase;
-                    letter-spacing: 0.02em;
-                }
-                .sa-form-group input {
-                    background: rgba(0,0,0,0.3);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    padding: 0.75rem 1rem;
-                    border-radius: 10px;
-                    color: white;
-                    font-size: 0.95rem;
-                    outline: none;
-                    transition: all 0.2s;
-                }
-                .sa-form-group input:focus {
-                    border-color: #818cf8;
-                    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
-                }
-
-                .sa-btn-primary {
-                    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-                    color: white;
-                    border: none;
-                    padding: 0.85rem;
-                    border-radius: 10px;
-                    font-weight: 600;
-                    font-size: 0.95rem;
-                    cursor: pointer;
-                    transition: transform 0.1s, box-shadow 0.2s;
-                    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-                    margin-top: 0.5rem;
-                }
-                .sa-btn-primary:active {
-                    transform: scale(0.98);
-                }
-                .sa-msg {
-                    margin-top: 1rem;
-                    padding: 0.75rem;
-                    background: rgba(34, 197, 94, 0.1);
-                    color: #4ade80;
-                    font-size: 0.85rem;
-                    border-radius: 8px;
-                    text-align: center;
-                    border: 1px solid rgba(34, 197, 94, 0.2);
-                }
-
-                .sa-table-responsive {
-                    overflow-x: auto;
-                }
-                .sa-table {
-                    width: 100%;
-                    border-collapse: separate;
-                    border-spacing: 0 8px;
-                }
-                .sa-table th {
-                    text-align: left;
-                    padding: 0 1rem 0.5rem 1rem;
-                    color: rgba(255,255,255,0.5);
-                    font-size: 0.75rem;
-                    text-transform: uppercase;
-                    font-weight: 600;
-                    letter-spacing: 0.05em;
-                }
-                .sa-table td {
-                    background: rgba(255,255,255,0.02);
-                    padding: 1rem;
-                    border-top: 1px solid rgba(255,255,255,0.02);
-                    border-bottom: 1px solid rgba(255,255,255,0.02);
-                }
-                .sa-table tr td:first-child {
-                    border-left: 1px solid rgba(255,255,255,0.02);
-                    border-top-left-radius: 10px;
-                    border-bottom-left-radius: 10px;
-                }
-                .sa-table tr td:last-child {
-                    border-right: 1px solid rgba(255,255,255,0.02);
-                    border-top-right-radius: 10px;
-                    border-bottom-right-radius: 10px;
-                }
-                .sa-table tr:hover td {
-                    background: rgba(255,255,255,0.04);
-                }
-
-                .sa-cell-main {
-                    font-weight: 600;
-                    color: white;
-                    font-size: 0.95rem;
-                }
-                .sa-cell-sub {
-                    color: #94a3b8;
-                    font-size: 0.9rem;
-                }
-
-                .sa-badge {
-                    padding: 0.35rem 0.6rem;
-                    border-radius: 6px;
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    letter-spacing: 0.03em;
-                }
-                .badge-super {
-                    background: rgba(168, 85, 247, 0.15);
-                    color: #d8b4fe;
-                    border: 1px solid rgba(168, 85, 247, 0.3);
-                }
-                .badge-admin {
-                    background: rgba(59, 130, 246, 0.15);
-                    color: #93c5fd;
-                    border: 1px solid rgba(59, 130, 246, 0.3);
-                }
-
-                .sa-shield {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.4rem;
-                    color: #64748b;
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                    background: rgba(0,0,0,0.3);
-                    padding: 0.35rem 0.75rem;
-                    border-radius: 20px;
-                }
-
-                .sa-btn-toggle {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.4rem;
-                    border: none;
-                    padding: 0.4rem 0.85rem;
-                    border-radius: 20px;
-                    font-size: 0.75rem;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-                .btn-active {
-                    background: rgba(34, 197, 94, 0.15);
-                    color: #4ade80;
-                    box-shadow: 0 0 10px rgba(34, 197, 94, 0.1);
-                }
-                .btn-active:hover {
-                    background: rgba(34, 197, 94, 0.25);
-                }
-                .btn-suspended {
-                    background: rgba(239, 68, 68, 0.15);
-                    color: #fca5a5;
-                    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
-                }
-                .btn-suspended:hover {
-                    background: rgba(239, 68, 68, 0.25);
-                }
-
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-                @media (max-width: 768px) {
-                    .sa-title-box h1 { font-size: 1.5rem; }
-                    .sa-title-box p { font-size: 0.85rem; }
-                    .sa-card { padding: 1rem; }
-                    .sa-card-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-                    
-                    /* Block/Card Layout for Table on Mobile */
-                    .sa-table, .sa-table tbody, .sa-table tr, .sa-table td {
-                        display: block;
-                        width: 100%;
-                    }
-                    .sa-table thead {
-                        display: none; /* Hide standard head */
-                    }
-                    .sa-table tr {
-                        margin-bottom: 1rem;
-                        background: rgba(255,255,255,0.02);
-                        border-radius: 12px;
-                        border: 1px solid rgba(255,255,255,0.05);
-                        padding: 0.5rem;
-                    }
-                    .sa-table td {
-                        text-align: right !important;
-                        padding: 0.75rem 0.5rem !important;
-                        border: none !important;
-                        border-bottom: 1px solid rgba(255,255,255,0.03) !important;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    }
-                    .sa-table td::before {
-                        content: attr(data-label);
-                        font-weight: 600;
-                        color: rgba(255,255,255,0.5);
-                        font-size: 0.75rem;
-                        text-transform: uppercase;
-                        text-align: left;
-                    }
-                    .sa-table tr td:last-child {
-                        border-bottom: none !important;
-                        justify-content: flex-end; /* right align the button */
-                        gap: 1rem;
-                    }
-                    .sa-table tr td:last-child::before {
-                        display: none; /* don't show "Control" label, keep it clean */
-                    }
-                }
-            `}}/>
+            <style dangerouslySetInnerHTML={{ __html: SA_STYLES }} />
         </div>
     );
 }
+
+const SA_STYLES = `
+.sa-wrapper { max-width: 1300px; margin: 0 auto; padding-bottom: 4rem; }
+
+/* Toast */
+.sa-toast { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1.25rem; border-radius: 12px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+.toast-success { background: rgba(16,185,129,0.15); color: #4ade80; border: 1px solid rgba(16,185,129,0.3); }
+.toast-error   { background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+/* Header */
+.sa-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.sa-title-box { display: flex; align-items: center; gap: 1rem; }
+.sa-title-box h1 { font-size: 1.9rem; font-weight: 800; color: white; margin: 0; }
+.sa-title-box p  { color: rgba(255,255,255,0.4); font-size: 0.9rem; margin: 0; }
+.sa-btn-new { display: flex; align-items: center; gap: 0.6rem; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(79,70,229,0.3); }
+.sa-btn-new:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(79,70,229,0.4); }
+
+/* KPI Grid */
+.sa-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+.sa-kpi-card { background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 1.5rem; display: flex; align-items: center; gap: 1.25rem; backdrop-filter: blur(20px); transition: transform 0.2s; }
+.sa-kpi-card:hover { transform: translateY(-3px); }
+.sa-kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sa-kpi-body { display: flex; flex-direction: column; gap: 0.1rem; }
+.sa-kpi-val   { font-size: 1.6rem; font-weight: 800; color: white; line-height: 1; }
+.sa-kpi-label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+.sa-kpi-sub   { font-size: 0.75rem; color: #475569; }
+
+/* Filters */
+.sa-filters { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.sa-search-box { flex: 1; min-width: 240px; display: flex; align-items: center; gap: 0.75rem; background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.65rem 1rem; color: #94a3b8; }
+.sa-search-box input { background: transparent; border: none; outline: none; color: white; font-size: 0.9rem; flex: 1; }
+.sa-search-box button { background: transparent; border: none; color: #475569; cursor: pointer; }
+.sa-filter-tabs { display: flex; gap: 0.5rem; }
+.sa-tab { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.sa-tab.active { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); color: #818cf8; }
+
+/* Card */
+.sa-card { background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; backdrop-filter: blur(20px); }
+.sa-card-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.sa-card-header h2 { font-size: 1rem; font-weight: 700; color: white; margin: 0; }
+
+/* Table */
+.sa-table-scroll { overflow-x: auto; }
+.sa-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+.sa-table th { text-align: left; padding: 0.9rem 1.5rem; font-size: 0.72rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; background: rgba(0,0,0,0.1); }
+.sa-table td { padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: middle; }
+.sa-table tr:last-child td { border-bottom: none; }
+.sa-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.sa-cell-name { display: flex; align-items: center; gap: 0.75rem; }
+.sa-avatar { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; color: white; flex-shrink: 0; }
+.sa-cell-main { font-weight: 600; color: white; font-size: 0.9rem; }
+.sa-cell-sub  { color: #64748b; font-size: 0.82rem; margin-top: 0.1rem; }
+.sa-overdue-tag { font-size: 0.7rem; font-weight: 700; color: #f87171; background: rgba(248,113,113,0.1); padding: 0.15rem 0.45rem; border-radius: 4px; margin-top: 0.2rem; display: inline-block; }
+.sa-empty { text-align: center; padding: 4rem; color: #475569; font-size: 0.9rem; font-weight: 600; }
+
+/* Badges */
+.sa-badge { padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; }
+.badge-super { background: rgba(168,85,247,0.12); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.25); }
+.sa-shield { display: inline-flex; align-items: center; gap: 0.4rem; color: #64748b; font-size: 0.8rem; font-weight: 600; }
+
+/* Status */
+.sa-status-btn { display: inline-flex; align-items: center; gap: 0.4rem; border: none; padding: 0.4rem 0.85rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-active    { background: rgba(34,197,94,0.12); color: #4ade80; }
+.btn-active:hover { background: rgba(34,197,94,0.22); }
+.btn-suspended { background: rgba(239,68,68,0.12); color: #fca5a5; }
+.btn-suspended:hover { background: rgba(239,68,68,0.22); }
+
+/* License */
+.sa-license-btn, .sa-link-btn { display: inline-flex; align-items: center; gap: 0.35rem; border: none; border-radius: 8px; padding: 0.35rem 0.7rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.sa-link-btn { background: transparent; color: #475569; text-decoration: underline; }
+.sa-link-btn:hover { color: white; }
+.lic-active   { background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.2); }
+.lic-expiring { background: rgba(245,158,11,0.1); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.lic-expired  { background: rgba(239,68,68,0.1);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+
+/* Actions */
+.sa-actions { display: flex; align-items: center; gap: 0.5rem; }
+.sa-action-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.sa-action-btn:hover { background: rgba(99,102,241,0.15); color: #818cf8; border-color: rgba(99,102,241,0.3); }
+.sa-action-btn.delete:hover { background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+
+/* Modal */
+.sa-modal-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
+.sa-modal { width: 100%; max-width: 600px; padding: 2rem; background: rgba(15,23,42,0.95); border-color: rgba(255,255,255,0.1); }
+.sa-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.sa-modal-title { display: flex; align-items: center; gap: 0.75rem; font-size: 1.2rem; font-weight: 700; color: white; }
+.sa-close-btn { background: transparent; border: none; color: #64748b; cursor: pointer; transition: color 0.2s; }
+.sa-close-btn:hover { color: white; }
+.sa-modal-sub { color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem; }
+.sa-modal-sub strong { color: white; }
+
+/* Form */
+.sa-form { display: flex; flex-direction: column; gap: 1.25rem; }
+.sa-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.sa-form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.sa-form-group label { font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.04em; }
+.sa-form-group input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 0.75rem 1rem; border-radius: 10px; color: white; font-size: 0.92rem; outline: none; transition: all 0.2s; }
+.sa-form-group input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.12); }
+.sa-form-hint { font-size: 0.75rem; color: #475569; }
+.sa-btn-primary { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; transition: all 0.2s; }
+.sa-btn-primary:hover { transform: translateY(-1px); }
+.sa-btn-warning { background: linear-gradient(135deg,#d97706,#b45309); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+.sa-btn-success { background: linear-gradient(135deg,#059669,#047857); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+
+.sa-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 1100px) { .sa-kpi-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 768px) {
+    .sa-title-box h1 { font-size: 1.4rem; }
+    .sa-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .sa-btn-new { width: 100%; justify-content: center; }
+    .sa-kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .sa-filters { flex-direction: column; align-items: stretch; }
+    .sa-search-box { min-width: 0; }
+    .sa-form-row { grid-template-columns: 1fr; }
+    .sa-table th, .sa-table td { padding: 0.75rem 1rem; }
+}
+@media (max-width: 480px) { .sa-kpi-grid { grid-template-columns: 1fr; } }
+`;

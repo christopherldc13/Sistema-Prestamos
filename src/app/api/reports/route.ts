@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET() {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     try {
+        const userId = (session.user as any).id;
+
         const loans = await prisma.loan.findMany({
-            include: { payments: true }
+            where: { userId },
+            include: { payments: true },
         });
 
         const now = new Date();
@@ -18,27 +28,21 @@ export async function GET() {
         loans.forEach((loan: any) => {
             totalLent += loan.amount;
             pendingBalance += loan.remainingBalance;
-
             loan.payments.forEach((p: any) => {
                 totalCollected += p.amount;
-                if (new Date(p.date) >= startOfToday) {
-                    collectedToday += p.amount;
-                }
+                if (new Date(p.date) >= startOfToday) collectedToday += p.amount;
             });
         });
 
-        const activeLoans = loans.filter((l: any) => l.status === 'active').length;
-        const paidLoans = loans.filter((l: any) => l.status === 'paid').length;
+        const activeLoans = loans.filter((l: any) => l.status === "active").length;
+        const paidLoans   = loans.filter((l: any) => l.status === "paid").length;
+        const overdueLoans = loans.filter((l: any) => l.status === "overdue").length;
 
-        // Recently processed payments
         const recentPayments = await prisma.payment.findMany({
-            take: 10,
-            orderBy: { date: 'desc' },
-            include: {
-                loan: {
-                    include: { client: true }
-                }
-            }
+            where: { loan: { userId } },
+            take: 15,
+            orderBy: { date: "desc" },
+            include: { loan: { include: { client: true } } },
         });
 
         return NextResponse.json({
@@ -48,9 +52,10 @@ export async function GET() {
                 collectedToday,
                 pendingBalance,
                 activeLoans,
-                paidLoans
+                paidLoans,
+                overdueLoans,
             },
-            recentPayments
+            recentPayments,
         });
     } catch (error) {
         console.error("Reports API error:", error);

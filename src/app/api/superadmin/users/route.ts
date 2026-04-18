@@ -11,12 +11,58 @@ export async function GET() {
     }
 
     try {
+        // Usar solo campos que existen en el schema actual del cliente Prisma
         const users = await prisma.user.findMany({
             orderBy: { createdAt: "desc" },
-            select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true }
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+                _count: {
+                    select: { clients: true, loans: true },
+                },
+            },
         });
-        return NextResponse.json(users);
+
+        // Agregar stats de portfolio por admin
+        const usersWithStats = await Promise.all(
+            users.map(async (u) => {
+                const loanAgg = await prisma.loan.aggregate({
+                    where: { userId: u.id },
+                    _sum: { amount: true, remainingBalance: true },
+                });
+                const activeLoans = await prisma.loan.count({
+                    where: { userId: u.id, status: "active" },
+                });
+                const overdueLoans = await prisma.loan.count({
+                    where: { userId: u.id, status: "overdue" },
+                });
+
+                // Intentar leer campos nuevos si existen (después de prisma generate)
+                const raw = u as any;
+
+                return {
+                    ...u,
+                    phone: raw.phone ?? null,
+                    licenseExpiresAt: raw.licenseExpiresAt ?? null,
+                    stats: {
+                        clients: u._count.clients,
+                        loans: u._count.loans,
+                        activeLoans,
+                        overdueLoans,
+                        portfolio: loanAgg._sum.amount ?? 0,
+                        pendingBalance: loanAgg._sum.remainingBalance ?? 0,
+                    },
+                };
+            })
+        );
+
+        return NextResponse.json(usersWithStats);
     } catch (error) {
+        console.error("Error superadmin GET users:", error);
         return NextResponse.json({ error: "Error obteniendo usuarios" }, { status: 500 });
     }
 }
@@ -36,20 +82,39 @@ export async function POST(req: NextRequest) {
         }
 
         const hashedPassword = await hash(password, 12);
-        const user = await prisma.user.create({
-            data: {
-                email,
-                password: hashedPassword,
-                name,
-                role: role || "admin",
-                isActive: true
-            },
-            select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true }
-        });
 
-        return NextResponse.json(user, { status: 201 });
+        // Construir data base (siempre funciona sin generate)
+        const createData: any = {
+            email,
+            password: hashedPassword,
+            name: name || null,
+            role: role || "admin",
+            isActive: true,
+        };
+
+        // Intentar con campos nuevos primero; si falla, usar solo campos base
+        const extendedData: any = { ...createData };
+        if (body.phone) extendedData.phone = body.phone;
+        if (body.licenseExpiresAt) extendedData.licenseExpiresAt = new Date(body.licenseExpiresAt);
+
+        let user;
+        try {
+            user = await prisma.user.create({ data: extendedData });
+        } catch (extErr: any) {
+            if (extErr?.message?.includes("Unknown argument")) {
+                user = await prisma.user.create({ data: createData });
+            } else {
+                throw extErr;
+            }
+        }
+
+        return NextResponse.json({
+            id: user.id, name: user.name, email: user.email,
+            role: user.role, isActive: user.isActive, createdAt: user.createdAt,
+        }, { status: 201 });
     } catch (error: any) {
-        if (error.code === 'P2002') return NextResponse.json({ error: "El correo ya está en uso" }, { status: 400 });
+        if (error.code === "P2002") return NextResponse.json({ error: "El correo ya está en uso" }, { status: 400 });
+        console.error("Error superadmin POST user:", error);
         return NextResponse.json({ error: "Error al crear usuario" }, { status: 500 });
     }
 }
