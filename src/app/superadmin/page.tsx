@@ -142,16 +142,16 @@ export default function SuperadminDashboard() {
                             <tbody>
                                 {users.map((u: any) => (
                                     <tr key={u.id}>
-                                        <td>
+                                        <td data-label="Empresa">
                                             <div className="sa-cell-main">{u.name || "Sin Nombre"}</div>
                                         </td>
-                                        <td className="sa-cell-sub">{u.email}</td>
-                                        <td>
+                                        <td className="sa-cell-sub" data-label="Email">{u.email}</td>
+                                        <td data-label="Sistema Rango">
                                             <span className={`sa-badge ${u.role === "superadmin" ? "badge-super" : "badge-admin"}`}>
                                                 {u.role.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td style={{ textAlign: "right" }}>
+                                        <td data-label="Control" style={{ textAlign: "right" }}>
                                             {u.role === "superadmin" ? (
                                                 <span className="sa-shield">
                                                     <ShieldCheck size={16} /> Protegido
@@ -405,6 +405,54 @@ export default function SuperadminDashboard() {
 
                 @keyframes spin { 100% { transform: rotate(360deg); } }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+                @media (max-width: 768px) {
+                    .sa-title-box h1 { font-size: 1.5rem; }
+                    .sa-title-box p { font-size: 0.85rem; }
+                    .sa-card { padding: 1rem; }
+                    .sa-card-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+                    
+                    /* Block/Card Layout for Table on Mobile */
+                    .sa-table, .sa-table tbody, .sa-table tr, .sa-table td {
+                        display: block;
+                        width: 100%;
+                    }
+                    .sa-table thead {
+                        display: none; /* Hide standard head */
+                    }
+                    .sa-table tr {
+                        margin-bottom: 1rem;
+                        background: rgba(255,255,255,0.02);
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.05);
+                        padding: 0.5rem;
+                    }
+                    .sa-table td {
+                        text-align: right !important;
+                        padding: 0.75rem 0.5rem !important;
+                        border: none !important;
+                        border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    .sa-table td::before {
+                        content: attr(data-label);
+                        font-weight: 600;
+                        color: rgba(255,255,255,0.5);
+                        font-size: 0.75rem;
+                        text-transform: uppercase;
+                        text-align: left;
+                    }
+                    .sa-table tr td:last-child {
+                        border-bottom: none !important;
+                        justify-content: flex-end; /* right align the button */
+                        gap: 1rem;
+                    }
+                    .sa-table tr td:last-child::before {
+                        display: none; /* don't show "Control" label, keep it clean */
+                    }
+                }
             `}}/>
         </div>
     );
