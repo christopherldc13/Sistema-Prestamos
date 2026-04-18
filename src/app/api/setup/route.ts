@@ -4,7 +4,7 @@ import { hash } from "bcryptjs";
 
 export async function GET() {
     try {
-        const hashedPassword = await hash("Cristopher13", 12);
+        const hashedPassword = await hash("admin123", 12);
 
         // 1. Create or ensure Superadmin exists
         const superadmin = await prisma.user.upsert({
