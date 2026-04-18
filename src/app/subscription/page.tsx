@@ -21,7 +21,7 @@ export default function SubscriptionPage() {
       accountNumber: "855402731",
       holder: "Christopher Lantigua de la Cruz",
       gradient: "linear-gradient(135deg, #053b7c, #0d5ea6)",
-      logoUrl: "https://logo.clearbit.com/popularenlinea.com"
+      logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
     },
     {
       id: "popular-ahorro",
@@ -30,7 +30,7 @@ export default function SubscriptionPage() {
       accountNumber: "852519743",
       holder: "Christopher Lantigua de la Cruz",
       gradient: "linear-gradient(135deg, #064085, #116cb7)",
-      logoUrl: "https://logo.clearbit.com/popularenlinea.com"
+      logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
     },
     {
       id: "banreservas",
@@ -39,7 +39,7 @@ export default function SubscriptionPage() {
       accountNumber: "9607489377",
       holder: "Christopher Lantigua de la Cruz",
       gradient: "linear-gradient(135deg, #00519a, #0076c8)",
-      logoUrl: "https://logo.clearbit.com/banreservas.com"
+      logoUrl: "https://acceso.rexi.do/media/2222738/logos-br-rgb_2.png"
     },
     {
       id: "bhd",
@@ -48,7 +48,7 @@ export default function SubscriptionPage() {
       accountNumber: "39599510017",
       holder: "Christopher Lantigua de la Cruz",
       gradient: "linear-gradient(135deg, #0b6839, #159354)",
-      logoUrl: "https://logo.clearbit.com/bhd.com.do"
+      logoUrl: "https://sb.gob.do/media/lddpcf23/bhd.svg"
     },
     {
       id: "qik-pesos",
@@ -57,17 +57,17 @@ export default function SubscriptionPage() {
       accountNumber: "1000449179",
       holder: "Christopher Lantigua de la Cruz",
       gradient: "linear-gradient(135deg, #242b3b, #323b4e)",
-      logoUrl: "https://logo.clearbit.com/qik.com.do"
+      logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzKfAhr6u8-VOrYmy6EMT-gSO4WxUeB5mQsA&s"
     },
     {
       id: "alaver",
       bankName: "ALAVER",
       type: "Cuenta de Ahorro",
       accountNumber: "410040044784",
-      formattedNumber: "41-004-004478-4",
+      formattedNumber: "410040044784",
       holder: "Lantigua de la Cruz Christopher",
       gradient: "linear-gradient(135deg, #004c8f, #0066b8)",
-      logoUrl: "https://logo.clearbit.com/alaver.com.do"
+      logoUrl: "https://alaver.com.do/wp-content/uploads/2025/04/alaver.jpg"
     }
   ];
 
@@ -94,7 +94,7 @@ export default function SubscriptionPage() {
         </p>
       </div>
 
-      <motion.div 
+      <motion.div
         className="cards-grid"
         variants={containerVariants}
         initial="hidden"
@@ -108,9 +108,9 @@ export default function SubscriptionPage() {
                   <h3>{acc.bankName}</h3>
                   <span>{acc.type}</span>
                 </div>
-                <img 
-                  src={acc.logoUrl} 
-                  alt={acc.bankName} 
+                <img
+                  src={acc.logoUrl}
+                  alt={acc.bankName}
                   className="bank-logo-img"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
@@ -121,8 +121,8 @@ export default function SubscriptionPage() {
                   <label>Número de Cuenta</label>
                   <p className="acc-number">{acc.formattedNumber || acc.accountNumber}</p>
                 </div>
-                <button 
-                  className="copy-btn" 
+                <button
+                  className="copy-btn"
                   onClick={() => copyToClipboard(acc.accountNumber, acc.id)}
                   title="Copiar número"
                 >
@@ -134,10 +134,10 @@ export default function SubscriptionPage() {
                 <label>Beneficiario</label>
                 <p>{acc.holder}</p>
               </div>
-              
+
               <div className="card-overlay" />
             </div>
-            
+
             {copiedAccount === acc.id && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="copy-toast">
                 ¡Copiado!
@@ -147,7 +147,8 @@ export default function SubscriptionPage() {
         ))}
       </motion.div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .sub-wrapper {
           max-width: 1200px;
           margin: 0 auto;
@@ -228,13 +229,14 @@ export default function SubscriptionPage() {
         }
 
         .bank-logo-img {
-          width: 44px;
-          height: 44px;
+          width: 68px;
+          height: 68px;
           object-fit: contain;
-          border-radius: 8px;
-          background: rgba(255,255,255,1);
-          padding: 4px;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          border-radius: 14px;
+          background: white;
+          padding: 8px;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+          border: 1px solid rgba(255,255,255,0.1);
         }
 
         .bank-info h3 {

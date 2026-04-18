@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" rx="16" fill="#ffffff"/>
+  <rect x="8" y="8" width="84" height="84" rx="12" fill="#003d7a"/>
+  <text x="50" y="40" font-family="Arial, sans-serif" font-size="13" font-weight="900" fill="#f0c040" text-anchor="middle" dominant-baseline="middle">BANRE</text>
+  <text x="50" y="58" font-family="Arial, sans-serif" font-size="13" font-weight="900" fill="#f0c040" text-anchor="middle" dominant-baseline="middle">SERVAS</text>
+  <rect x="20" y="68" width="60" height="3" rx="2" fill="#f0c040"/>
+</svg>
