@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, HeartHandshake, FileText, ChevronRight,
   TrendingUp, DollarSign, Clock, AlertTriangle, CheckCircle2,
-  ArrowUpRight, Wallet, Activity, CalendarX
+  ArrowUpRight, Wallet, Activity, CalendarX, ShieldCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -179,6 +179,7 @@ export default function Home() {
             { href: "/loans/create", title: "Nuevo Préstamo", desc: "Generar crédito inmediato", icon: <Clock size={20} />, color: "linear-gradient(135deg,#10b981,#059669)" },
             { href: "/loans", title: "Listado de Créditos", desc: "Ver todos los préstamos", icon: <LayoutDashboard size={20} />, color: "linear-gradient(135deg,#a855f7,#7e22ce)" },
             { href: "/reports", title: "Reportes", desc: "Análisis de rentabilidad", icon: <FileText size={20} />, color: "linear-gradient(135deg,#f59e0b,#d97706)" },
+            { href: "/subscription", title: "Pago de Licencia", desc: "Ver cuentas bancarias", icon: <ShieldCheck size={20} />, color: "linear-gradient(135deg,#ec4899,#be185d)" },
           ].map(action => (
             <motion.div key={action.href} variants={item}>
               <Link href={action.href}><ActionItem {...action} /></Link>

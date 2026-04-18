@@ -43,12 +43,22 @@ const handlePdfOutput = async (doc: any, filename: string) => {
 // ============================================================
 //  COMPANY CONFIGURATION
 // ============================================================
+export interface BankAccount {
+    id:     string;
+    bank:   string;
+    type:   string;
+    number: string;
+    holder: string;
+    iban?:  string;
+}
+
 export interface CompanyConfig {
-    brand:   string;
-    name:    string;
-    slogan:  string;
-    address: string;
-    phone:   string;
+    brand:        string;
+    name:         string;
+    slogan:       string;
+    address:      string;
+    phone:        string;
+    bankAccounts?: BankAccount[];
 }
 
 export const DEFAULT_COMPANY: CompanyConfig = {
@@ -984,6 +994,71 @@ export const generateAccountStatement = (loan: any, config: CompanyConfig = DEFA
         });
 
         y = (doc as any).lastAutoTable.finalY + 8;
+    }
+
+    // ── Bank Accounts Section ────────────────────────────────
+    const accounts = config.bankAccounts ?? [];
+    if (accounts.length > 0 && loan.status !== "paid") {
+        if (y > 220) { doc.addPage(); y = 25; }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 41, 82);
+        doc.text("CUENTAS PARA REALIZAR SU PAGO", A4_L, y);
+        y += 5;
+
+        const colW = (A4_CW - (accounts.length - 1) * 3) / Math.min(accounts.length, 3);
+        const rowsNeeded = Math.ceil(accounts.length / 3);
+
+        for (let row = 0; row < rowsNeeded; row++) {
+            const rowAccounts = accounts.slice(row * 3, row * 3 + 3);
+            const cardH = 26 + (rowAccounts.some(a => a.iban) ? 6 : 0);
+
+            rowAccounts.forEach((acc, col) => {
+                const cx = A4_L + col * (colW + 3);
+                doc.setFillColor(240, 244, 255);
+                doc.setDrawColor(190, 205, 235);
+                doc.setLineWidth(0.3);
+                doc.roundedRect(cx, y, colW, cardH, 2, 2, "FD");
+
+                let ay = y + 6;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8.5);
+                doc.setTextColor(30, 41, 82);
+                doc.text(acc.bank, cx + colW / 2, ay, { align: "center" });
+
+                ay += 5;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(100, 110, 140);
+                doc.text(acc.type.toUpperCase(), cx + colW / 2, ay, { align: "center" });
+
+                ay += 5;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(9);
+                doc.setTextColor(20, 20, 20);
+                doc.text(acc.number, cx + colW / 2, ay, { align: "center" });
+
+                ay += 5;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(7);
+                doc.setTextColor(80, 90, 110);
+                doc.text(`A nombre de: ${acc.holder}`, cx + colW / 2, ay, { align: "center" });
+
+                if (acc.iban) {
+                    ay += 5;
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(6.5);
+                    doc.setTextColor(110, 120, 140);
+                    doc.text(`IBAN: ${acc.iban}`, cx + colW / 2, ay, { align: "center" });
+                }
+            });
+
+            y += cardH + 4;
+        }
+
+        doc.setTextColor(0, 0, 0);
+        y += 4;
     }
 
     // ── Footers on all pages ──────────────────────────────────

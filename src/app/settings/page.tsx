@@ -4,12 +4,21 @@ import React, { useState, useEffect } from "react";
 import {
     Building2, Save, ArrowLeft, RefreshCcw,
     AtSign, MapPin, Phone, FileText, CheckCircle2,
-    Lock, Eye, EyeOff, ShieldAlert
+    Lock, Eye, EyeOff, ShieldAlert, Landmark, Plus, Trash2, Copy, Check
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
-type Tab = "brand" | "security";
+type Tab = "brand" | "security" | "accounts";
+
+interface BankAccount {
+    id: string;
+    bank: string;
+    type: string;
+    number: string;
+    holder: string;
+    iban?: string;
+}
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<Tab>("brand");
@@ -18,6 +27,16 @@ export default function SettingsPage() {
     const [loadingBrand, setLoadingBrand] = useState(true);
     const [savingBrand, setSavingBrand] = useState(false);
     const [brandSuccess, setBrandSuccess] = useState(false);
+
+    // Cuentas bancarias
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+    const [savingAccounts, setSavingAccounts] = useState(false);
+    const [accountsSuccess, setAccountsSuccess] = useState(false);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [newAccount, setNewAccount] = useState<Omit<BankAccount, "id">>({
+        bank: "", type: "Corriente", number: "", holder: "", iban: ""
+    });
+    const [showAddForm, setShowAddForm] = useState(false);
 
     const [passwords, setPasswords] = useState({ current: "", newPass: "", confirm: "" });
     const [showCurrent, setShowCurrent] = useState(false);
@@ -28,10 +47,49 @@ export default function SettingsPage() {
     useEffect(() => {
         fetch("/api/settings")
             .then(r => r.json())
-            .then(d => { if (!d.error) setConfig(d); })
+            .then(d => {
+                if (!d.error) {
+                    const { bankAccounts: accs, ...rest } = d;
+                    setConfig(rest);
+                    if (Array.isArray(accs)) setBankAccounts(accs);
+                }
+            })
             .catch(console.error)
             .finally(() => setLoadingBrand(false));
     }, []);
+
+    const copyToClipboard = (text: string, id: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedId(id);
+            setTimeout(() => setCopiedId(null), 2000);
+        });
+    };
+
+    const addAccount = () => {
+        if (!newAccount.bank || !newAccount.number || !newAccount.holder) return;
+        const acc: BankAccount = { ...newAccount, id: Date.now().toString() };
+        setBankAccounts(prev => [...prev, acc]);
+        setNewAccount({ bank: "", type: "Corriente", number: "", holder: "", iban: "" });
+        setShowAddForm(false);
+    };
+
+    const removeAccount = (id: string) => {
+        setBankAccounts(prev => prev.filter(a => a.id !== id));
+    };
+
+    const saveAccounts = async () => {
+        setSavingAccounts(true);
+        setAccountsSuccess(false);
+        try {
+            const res = await fetch("/api/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ...config, bankAccounts }),
+            });
+            if (res.ok) { setAccountsSuccess(true); setTimeout(() => setAccountsSuccess(false), 3000); }
+        } catch { alert("Error de conexión"); }
+        finally { setSavingAccounts(false); }
+    };
 
     const handleSaveBrand = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,7 +99,7 @@ export default function SettingsPage() {
             const res = await fetch("/api/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(config),
+                body: JSON.stringify({ ...config, bankAccounts }),
             });
             if (res.ok) { setBrandSuccess(true); setTimeout(() => setBrandSuccess(false), 3000); }
         } catch { alert("Error de conexión"); }
@@ -185,6 +243,7 @@ export default function SettingsPage() {
                 </div>
             )}
 
+
             {activeTab === "security" && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="security-layout">
                     <div className="glass-card security-hint-card">
@@ -316,13 +375,50 @@ const SETTINGS_STYLES = `
 .state-screen { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; color: #475569; font-weight: 600; }
 .spinner-pro { width: 44px; height: 44px; border: 4px solid rgba(99,102,241,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
 
+/* Accounts */
+.accounts-layout { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; }
+.accounts-hint-card { padding: 2rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
+.accounts-hint-card h3 { font-size: 1.1rem; font-weight: 700; color: white; }
+.accounts-hint-card p { font-size: 0.82rem; color: #64748b; line-height: 1.6; }
+.accounts-hint-card strong { color: #818cf8; }
+
+.accounts-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+.account-card { display: flex; align-items: flex-start; gap: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 1rem 1.25rem; }
+.acc-bank-icon { width: 40px; height: 40px; border-radius: 10px; background: rgba(99,102,241,0.15); color: #818cf8; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; }
+.acc-info { flex: 1; min-width: 0; }
+.acc-bank-name { font-weight: 700; color: white; font-size: 0.95rem; }
+.acc-type-badge { display: inline-block; font-size: 0.7rem; font-weight: 700; background: rgba(99,102,241,0.12); color: #818cf8; border-radius: 4px; padding: 0.1rem 0.45rem; margin: 0.2rem 0; }
+.acc-number { font-size: 1rem; font-weight: 800; color: #f8fafc; font-family: monospace; letter-spacing: 0.05em; }
+.acc-iban { font-size: 0.72rem; color: #475569; margin-top: 0.1rem; word-break: break-all; }
+.acc-holder { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
+.acc-actions { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+.acc-copy-btn, .acc-del-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+.acc-copy-btn:hover { background: rgba(99,102,241,0.15); color: #818cf8; }
+.acc-del-btn:hover { background: rgba(239,68,68,0.15); color: #fca5a5; }
+.acc-empty { text-align: center; padding: 2rem; color: #475569; font-size: 0.88rem; border: 1px dashed rgba(255,255,255,0.08); border-radius: 10px; }
+
+.add-account-form { background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.15); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; overflow: hidden; }
+.add-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.full-col { grid-column: span 2; }
+.add-form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
+.btn-cancel-sm { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #64748b; padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.btn-add-confirm { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #818cf8; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
+.btn-add-confirm:hover { background: rgba(99,102,241,0.3); }
+
+.accounts-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); gap: 1rem; flex-wrap: wrap; }
+.btn-add-account { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: 1px dashed rgba(99,102,241,0.4); color: #818cf8; padding: 0.7rem 1.25rem; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 0.88rem; transition: all 0.2s; }
+.btn-add-account:hover { background: rgba(99,102,241,0.08); border-style: solid; }
+
 @media (max-width: 1024px) {
     .settings-grid { grid-template-columns: 1fr; }
     .security-layout { grid-template-columns: 1fr; }
+    .accounts-layout { grid-template-columns: 1fr; }
     .preview-card { order: -1; }
 }
 @media (max-width: 640px) {
     .header-title { font-size: 1.6rem; }
     .form-card { padding: 1.5rem; }
+    .add-form-grid { grid-template-columns: 1fr; }
+    .full-col { grid-column: span 1; }
 }
 `;

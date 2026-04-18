@@ -11,25 +11,31 @@ export async function GET() {
     }
 
     try {
-        // Usar solo campos que existen en el schema actual del cliente Prisma
-        const users = await prisma.user.findMany({
-            orderBy: { createdAt: "desc" },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                isActive: true,
-                createdAt: true,
-                _count: {
-                    select: { clients: true, loans: true },
+        // Intentar incluir campos nuevos; si Prisma no los conoce aún, usar select base
+        let users: any[];
+        try {
+            users = await (prisma.user.findMany as any)({
+                orderBy: { createdAt: "desc" },
+                select: {
+                    id: true, name: true, email: true, phone: true,
+                    role: true, isActive: true, licenseExpiresAt: true,
+                    createdAt: true,
+                    _count: { select: { clients: true, loans: true } },
                 },
-            },
-        });
+            });
+        } catch {
+            users = await prisma.user.findMany({
+                orderBy: { createdAt: "desc" },
+                select: {
+                    id: true, name: true, email: true,
+                    role: true, isActive: true, createdAt: true,
+                    _count: { select: { clients: true, loans: true } },
+                },
+            });
+        }
 
-        // Agregar stats de portfolio por admin
         const usersWithStats = await Promise.all(
-            users.map(async (u) => {
+            users.map(async (u: any) => {
                 const loanAgg = await prisma.loan.aggregate({
                     where: { userId: u.id },
                     _sum: { amount: true, remainingBalance: true },
@@ -41,16 +47,13 @@ export async function GET() {
                     where: { userId: u.id, status: "overdue" },
                 });
 
-                // Intentar leer campos nuevos si existen (después de prisma generate)
-                const raw = u as any;
-
                 return {
                     ...u,
-                    phone: raw.phone ?? null,
-                    licenseExpiresAt: raw.licenseExpiresAt ?? null,
+                    phone: u.phone ?? null,
+                    licenseExpiresAt: u.licenseExpiresAt ?? null,
                     stats: {
-                        clients: u._count.clients,
-                        loans: u._count.loans,
+                        clients: u._count?.clients ?? 0,
+                        loans: u._count?.loans ?? 0,
                         activeLoans,
                         overdueLoans,
                         portfolio: loanAgg._sum.amount ?? 0,
@@ -83,7 +86,6 @@ export async function POST(req: NextRequest) {
 
         const hashedPassword = await hash(password, 12);
 
-        // Construir data base (siempre funciona sin generate)
         const createData: any = {
             email,
             password: hashedPassword,
@@ -92,7 +94,6 @@ export async function POST(req: NextRequest) {
             isActive: true,
         };
 
-        // Intentar con campos nuevos primero; si falla, usar solo campos base
         const extendedData: any = { ...createData };
         if (body.phone) extendedData.phone = body.phone;
         if (body.licenseExpiresAt) extendedData.licenseExpiresAt = new Date(body.licenseExpiresAt);

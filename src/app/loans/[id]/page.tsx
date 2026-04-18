@@ -6,7 +6,8 @@ import {
     CreditCard, Calendar, ArrowLeft, Download,
     PlusCircle, History, AlertCircle, CheckCircle2,
     DollarSign, FileText, X, Clock, Wallet,
-    Table2, TrendingDown, ChevronRight, BookOpen
+    Table2, TrendingDown, ChevronRight, BookOpen,
+    Copy, Check, Building2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -37,6 +38,16 @@ export default function LoanDetailsPage() {
         method: "cash",
         date: new Date().toISOString().split("T")[0],
     });
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const copyField = (text: string, key: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedField(key);
+            setTimeout(() => setCopiedField(null), 2000);
+        }).catch(() => {});
+    };
+
+    const bankAccounts: any[] = (companyConfig as any)?.bankAccounts ?? [];
 
     const fetchLoanData = async () => {
         try {
@@ -289,6 +300,60 @@ export default function LoanDetailsPage() {
                 </motion.aside>
             </div>
 
+            {/* Bank Accounts Card */}
+            {bankAccounts.length > 0 && loan.status !== "paid" && (
+                <motion.section
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="bank-section"
+                >
+                    <header className="history-header">
+                        <div className="h-title-group">
+                            <Building2 size={20} className="icon-main" />
+                            <h2>Cuentas para Transferencia</h2>
+                        </div>
+                        <span className="h-count">{bankAccounts.length} cuenta{bankAccounts.length !== 1 ? "s" : ""}</span>
+                    </header>
+                    <div className="bank-accounts-grid">
+                        {bankAccounts.map((acc: any) => (
+                            <div key={acc.id} className="glass-card bank-account-display-card">
+                                <div className="badc-top">
+                                    <span className="badc-bank">{acc.bank}</span>
+                                    <span className="badc-type">{acc.type}</span>
+                                </div>
+                                <div className="badc-number-row">
+                                    <span className="badc-number">{acc.number}</span>
+                                    <button
+                                        className={`badc-copy ${copiedField === `page-${acc.id}` ? "copied" : ""}`}
+                                        onClick={() => copyField(acc.number, `page-${acc.id}`)}
+                                    >
+                                        {copiedField === `page-${acc.id}` ? <Check size={13} /> : <Copy size={13} />}
+                                        <span>{copiedField === `page-${acc.id}` ? "Copiado!" : "Copiar"}</span>
+                                    </button>
+                                </div>
+                                <div className="badc-holder">
+                                    <span className="badc-holder-label">A nombre de</span>
+                                    <span className="badc-holder-name">{acc.holder}</span>
+                                </div>
+                                {acc.iban && (
+                                    <div className="badc-iban-row">
+                                        <span className="badc-holder-label">IBAN</span>
+                                        <span className="badc-iban">{acc.iban}</span>
+                                        <button
+                                            className={`badc-copy badc-copy-sm ${copiedField === `page-iban-${acc.id}` ? "copied" : ""}`}
+                                            onClick={() => copyField(acc.iban, `page-iban-${acc.id}`)}
+                                        >
+                                            {copiedField === `page-iban-${acc.id}` ? <Check size={11} /> : <Copy size={11} />}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </motion.section>
+            )}
+
             {/* Tabla de Amortización */}
             {schedule.length > 0 && (
                 <section className="amort-section">
@@ -505,6 +570,68 @@ export default function LoanDetailsPage() {
                                     </div>
                                 </div>
 
+                                {/* Transfer accounts panel */}
+                                <AnimatePresence>
+                                    {paymentForm.method === "transfer" && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            style={{ overflow: "hidden" }}
+                                            className="transfer-panel-wrapper"
+                                        >
+                                            <div className="transfer-panel">
+                                                <div className="transfer-panel-header">
+                                                    <Building2 size={15} />
+                                                    <span>Cuentas para Transferencia</span>
+                                                </div>
+                                                {bankAccounts.length === 0 ? (
+                                                    <p className="transfer-no-accounts">No hay cuentas configuradas. El administrador puede agregarlas en Configuración.</p>
+                                                ) : (
+                                                    <div className="transfer-accounts-list">
+                                                        {bankAccounts.map((acc: any) => (
+                                                            <div key={acc.id} className="transfer-account-card">
+                                                                <div className="tac-bank-row">
+                                                                    <span className="tac-bank">{acc.bank}</span>
+                                                                    <span className="tac-type">{acc.type}</span>
+                                                                </div>
+                                                                <div className="tac-number-row">
+                                                                    <span className="tac-number">{acc.number}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`tac-copy-btn ${copiedField === `num-${acc.id}` ? "copied" : ""}`}
+                                                                        onClick={() => copyField(acc.number, `num-${acc.id}`)}
+                                                                    >
+                                                                        {copiedField === `num-${acc.id}` ? <Check size={12} /> : <Copy size={12} />}
+                                                                        {copiedField === `num-${acc.id}` ? "Copiado" : "Copiar"}
+                                                                    </button>
+                                                                </div>
+                                                                <div className="tac-holder-row">
+                                                                    <span className="tac-holder-label">A nombre de:</span>
+                                                                    <span className="tac-holder">{acc.holder}</span>
+                                                                </div>
+                                                                {acc.iban && (
+                                                                    <div className="tac-iban-row">
+                                                                        <span className="tac-holder-label">IBAN:</span>
+                                                                        <span className="tac-number tac-iban">{acc.iban}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            className={`tac-copy-btn ${copiedField === `iban-${acc.id}` ? "copied" : ""}`}
+                                                                            onClick={() => copyField(acc.iban, `iban-${acc.id}`)}
+                                                                        >
+                                                                            {copiedField === `iban-${acc.id}` ? <Check size={12} /> : <Copy size={12} />}
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
                                 <footer className="modal-footer-pro">
                                     <button type="button" className="btn-cancel-pro" onClick={() => setIsPaymentModalOpen(false)}>Cancelar</button>
                                     <button type="submit" className="btn-confirm-pro" disabled={isSubmitting}>
@@ -641,6 +768,46 @@ export default function LoanDetailsPage() {
         .btn-confirm-pro { flex: 2; background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 16px -4px rgba(99,102,241,0.4); }
         .btn-confirm-pro:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-confirm-pro:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Bank accounts display section */
+        .bank-section { margin-bottom: 2.5rem; }
+        .bank-accounts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+        .bank-account-display-card { padding: 1.5rem; border: 1px solid rgba(99,102,241,0.15) !important; }
+        .badc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .badc-bank { font-size: 1rem; font-weight: 800; color: #e2e8f0; }
+        .badc-type { font-size: 0.7rem; font-weight: 700; background: rgba(99,102,241,0.12); color: #818cf8; padding: 0.25rem 0.6rem; border-radius: 5px; text-transform: uppercase; }
+        .badc-number-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.875rem; gap: 1rem; }
+        .badc-number { font-family: monospace; font-size: 1.25rem; font-weight: 800; color: #f8fafc; letter-spacing: 0.05em; }
+        .badc-copy { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #818cf8; padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .badc-copy:hover { background: rgba(99,102,241,0.15); color: white; }
+        .badc-copy.copied { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #10b981; }
+        .badc-copy-sm { padding: 0.3rem 0.5rem; }
+        .badc-holder { display: flex; flex-direction: column; gap: 0.2rem; padding-top: 0.875rem; border-top: 1px solid rgba(255,255,255,0.05); }
+        .badc-holder-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #475569; }
+        .badc-holder-name { font-size: 0.9rem; font-weight: 600; color: #94a3b8; }
+        .badc-iban-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+        .badc-iban { font-family: monospace; font-size: 0.8rem; font-weight: 600; color: #64748b; flex: 1; }
+
+        /* Transfer panel */
+        .transfer-panel-wrapper { margin-bottom: 1.25rem; }
+        .transfer-panel { background: rgba(99,102,241,0.04); border: 1px solid rgba(99,102,241,0.15); border-radius: 12px; padding: 1rem 1.25rem; }
+        .transfer-panel-header { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #818cf8; margin-bottom: 0.875rem; }
+        .transfer-no-accounts { font-size: 0.82rem; color: #475569; font-weight: 500; text-align: center; padding: 0.5rem 0; }
+        .transfer-accounts-list { display: flex; flex-direction: column; gap: 0.875rem; }
+        .transfer-account-card { background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 0.875rem 1rem; }
+        .tac-bank-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+        .tac-bank { font-size: 0.875rem; font-weight: 800; color: #e2e8f0; }
+        .tac-type { font-size: 0.7rem; font-weight: 700; background: rgba(99,102,241,0.1); color: #818cf8; padding: 0.2rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+        .tac-number-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+        .tac-number { font-family: monospace; font-size: 1rem; font-weight: 700; color: #f8fafc; letter-spacing: 0.04em; flex: 1; }
+        .tac-iban { font-size: 0.8rem; }
+        .tac-copy-btn { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #818cf8; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .tac-copy-btn:hover { background: rgba(99,102,241,0.15); }
+        .tac-copy-btn.copied { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: #10b981; }
+        .tac-holder-row { display: flex; align-items: center; gap: 0.4rem; }
+        .tac-iban-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap; }
+        .tac-holder-label { font-size: 0.72rem; font-weight: 700; color: #475569; }
+        .tac-holder { font-size: 0.82rem; font-weight: 600; color: #94a3b8; }
 
         .state-screen { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; color: #475569; font-weight: 600; text-align: center; }
         .spinner-pro { width: 48px; height: 48px; border: 4px solid rgba(99,102,241,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
