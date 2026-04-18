@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { isOverdue } from "@/lib/loan-calculator";
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,19 +13,28 @@ export async function POST(req: NextRequest) {
 
         const pAmount = parseFloat(amount);
 
-        // Update loan balance
-        const loan = await prisma.loan.findUnique({
-            where: { id: loanId }
-        });
+        const loan = await prisma.loan.findUnique({ where: { id: loanId } });
 
         if (!loan) {
             return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
         }
 
-        const newBalance = Math.max(0, loan.remainingBalance - pAmount);
-        const newStatus = newBalance === 0 ? "paid" : loan.status;
+        if (loan.status === "paid") {
+            return NextResponse.json({ error: "Este préstamo ya está saldado" }, { status: 400 });
+        }
 
-        // Create payment and update loan in a transaction
+        const newBalance = Math.max(0, Math.round((loan.remainingBalance - pAmount) * 100) / 100);
+
+        // Determinar nuevo estado
+        let newStatus: string;
+        if (newBalance === 0) {
+            newStatus = "paid";
+        } else if (isOverdue((loan as any).dueDate, loan.status)) {
+            newStatus = "overdue";
+        } else {
+            newStatus = loan.status === "overdue" ? "overdue" : "active";
+        }
+
         const [payment, updatedLoan] = await prisma.$transaction([
             prisma.payment.create({
                 data: {

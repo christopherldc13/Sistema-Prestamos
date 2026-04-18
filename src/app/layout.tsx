@@ -1,5 +1,5 @@
 import React from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
 
@@ -9,6 +9,13 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Sistema de Préstamos | Premium Management",
   description: "Gestión completa de préstamos, clientes y pagos con generación de PDF.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 import { Providers } from "@/components/Providers";
@@ -46,6 +53,12 @@ export default function RootLayout({
             max-width: 1400px;
             margin: 0 auto;
             width: 100%;
+          }
+
+          @media (max-width: 768px) {
+            .main-content {
+              padding: 1rem 0.75rem;
+            }
           }
 
         `}} />

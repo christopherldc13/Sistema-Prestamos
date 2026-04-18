@@ -70,3 +70,15 @@ a {
 .input-field:focus {
   border-color: var(--primary);
 }
+
+@media (max-width: 768px) {
+  .input-field, select.select-pro, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Hide standard scrollbars to avoid ugly UI on touch surfaces */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; 
+  }
+}

@@ -32,21 +32,25 @@ model Client {
 }
 
 model Loan {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  amount        Float
-  interestRate  Float
-  status        String    @default("active") // "active", "paid", "overdue"
-  term          Int       // number of units (days/weeks/months)
-  termUnit      String    // "days", "weeks", "months"
-  interestType  String    // "simple", "compound"
-  startDate     DateTime  @default(now())
-  totalToPay    Float
-  remainingBalance Float
-  clientId      String    @db.ObjectId
-  client        Client    @relation(fields: [clientId], references: [id])
-  payments      Payment[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  amount            Float
+  interestRate      Float
+  rateFrequency     String    @default("monthly") // "daily" | "monthly" | "annual"
+  status            String    @default("active")  // "active", "paid", "overdue"
+  term              Int
+  termUnit          String    // "days", "weeks", "months"
+  interestType      String    // "simple", "compound"
+  startDate         DateTime  @default(now())
+  dueDate           DateTime?
+  totalToPay        Float
+  installmentAmount Float?
+  remainingBalance  Float
+  paymentSchedule   Json?
+  clientId          String    @db.ObjectId
+  client            Client    @relation(fields: [clientId], references: [id])
+  payments          Payment[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Payment {

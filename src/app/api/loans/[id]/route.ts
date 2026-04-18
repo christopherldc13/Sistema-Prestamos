@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { isOverdue } from "@/lib/loan-calculator";
 
 export async function GET(
-    req: NextRequest,
+    _req: Request,
     { params }: { params: { id: string } }
 ) {
     try {
@@ -18,6 +19,13 @@ export async function GET(
 
         if (!loan) {
             return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
+        }
+
+        // Auto-actualizar status a overdue si la fecha de vencimiento ya pasó
+        const loanAny = loan as any;
+        if (loan.status === "active" && isOverdue(loanAny.dueDate, loan.status)) {
+            await prisma.loan.update({ where: { id: loan.id }, data: { status: "overdue" } });
+            loanAny.status = "overdue";
         }
 
         return NextResponse.json(loan);

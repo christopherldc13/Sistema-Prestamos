@@ -194,17 +194,21 @@ export function Navbar() {
           border: none;
           color: white;
           cursor: pointer;
+          padding: 8px;
+          border-radius: 8px;
         }
         .mobile-menu {
           position: absolute;
           top: 100%;
           left: 0;
           right: 0;
-          background: #0f172a;
-          padding: 1rem;
+          background: rgba(15, 23, 42, 0.98);
+          backdrop-filter: blur(16px);
+          padding: 1.25rem 1rem;
           border-bottom: 1px solid rgba(255,255,255,0.1);
           display: flex;
           flex-direction: column;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
         }
         .mobile-links {
           list-style: none;
@@ -227,7 +231,7 @@ export function Navbar() {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem;
+            padding: 1rem 0.75rem 0.75rem;
             color: #f8fafc;
             border-top: 1px solid rgba(255,255,255,0.1);
             margin-top: 0.5rem;
@@ -236,19 +240,22 @@ export function Navbar() {
             width: 100%;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.75rem;
             background: rgba(244, 63, 94, 0.1);
             color: #f43f5e;
             border: 1px solid rgba(244, 63, 94, 0.2);
-            padding: 0.75rem;
+            padding: 0.85rem;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
+            margin-top: 0.5rem;
         }
 
         @media (max-width: 900px) {
           .desktop-only { display: none; }
           .mobile-toggle { display: block; }
+          .nav-brand { font-size: 1.35rem; }
         }
       `}</style>
     </nav>

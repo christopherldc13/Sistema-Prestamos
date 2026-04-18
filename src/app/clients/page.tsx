@@ -398,8 +398,8 @@ export default function ClientsPage() {
         }
         .view-link:hover { text-decoration: underline; }
 
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1.5rem; }
-        .modal-sheet { width: 100%; max-width: 680px; padding: 2.5rem; background: #0f172a; border-color: rgba(255,255,255,0.1); }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
+        .modal-sheet { width: 100%; max-width: 680px; max-height: 95vh; overflow-y: auto; padding: 2.5rem; background: #0f172a; border-color: rgba(255,255,255,0.1); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
         .modal-header h2 { font-size: 1.5rem; font-weight: 800; color: white; }
         .close-btn { background: transparent; border: none; color: #64748b; cursor: pointer; }
@@ -410,19 +410,23 @@ export default function ClientsPage() {
         .area-fix { min-height: 100px; resize: none; grid-column: span 2; }
         
         .modal-footer-btn { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
-        .btn-cancel { background: transparent; border: 1px solid var(--border); color: #94a3b8; padding: 0.75rem 1.5rem; border-radius: 10px; cursor: pointer; }
-        .btn-save-pro { background: #6366f1; color: white; border: none; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 700; cursor: pointer; }
+        .btn-cancel { background: transparent; border: 1px solid var(--border); color: #94a3b8; padding: 0.75rem 1.5rem; border-radius: 10px; cursor: pointer; display: flex; justify-content: center; }
+        .btn-save-pro { background: #6366f1; color: white; border: none; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; }
 
         .state-msg { grid-column: 1 / -1; text-align: center; padding: 6rem; color: #475569; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
         .spinner-mini { width: 24px; height: 24px; border: 3px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 768px) {
-          .clients-header { flex-direction: column; align-items: flex-start; }
-          .title-pro { font-size: 1.75rem; }
-          .clients-grid-adaptive { grid-template-columns: 1fr; }
-          .form-row-pro { grid-template-columns: 1fr; }
-          .modal-sheet { padding: 1.5rem; }
+          .clients-header { flex-direction: column; align-items: flex-start; gap: 1rem; padding-bottom: 1rem; }
+          .btn-add-client { width: 100%; justify-content: center; }
+          .title-pro { font-size: 1.6rem; line-height: 1.2; }
+          .clients-grid-adaptive { grid-template-columns: 1fr; gap: 1rem;}
+          .form-row-pro { grid-template-columns: 1fr; gap: 1rem; }
+          .area-fix { grid-column: span 1; }
+          .modal-sheet { padding: 1.5rem; margin-top: 1rem; }
+          .modal-footer-btn { flex-direction: column; gap: 0.75rem; }
+          .modal-footer-btn button { width: 100%; }
         }
       `}} />
         </div>

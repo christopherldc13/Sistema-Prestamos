@@ -214,7 +214,7 @@ export default function LoansPage() {
         .select-pro { background: transparent; border: none; color: #94a3b8; font-weight: 600; outline: none; cursor: pointer; font-size: 0.9rem; }
         .select-pro option { background: #0f172a; color: white; }
 
-        .table-responsive { overflow-x: auto; padding: 0; background: rgba(15, 23, 42, 0.2); }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0; background: rgba(15, 23, 42, 0.2); }
         .pro-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
         .pro-table th { padding: 1.25rem 1.5rem; font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .pro-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: middle; }
@@ -255,6 +255,13 @@ export default function LoansPage() {
           .loans-header { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
           .tools-section { flex-direction: column; align-items: stretch; gap: 1rem; }
           .divider-v { display: none; }
+        }
+        @media (max-width: 768px) {
+          .loans-header { padding-bottom: 1rem; gap: 1rem; }
+          .title-pro { font-size: 1.6rem; }
+          .btn-add-loan-pro { width: 100%; justify-content: center; }
+          .filter-pro { width: 100%; }
+          .select-pro { width: 100%; background: rgba(15,23,42,0.8); padding: 0.75rem; border-radius: 8px; }
         }
       `}} />
         </div>
