@@ -46,6 +46,12 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If the user is superadmin, redirect to superadmin dashboard
+    if (session && (session.user as any)?.role === "superadmin") {
+      window.location.href = "/superadmin";
+      return;
+    }
+
     const fetchStats = async () => {
       try {
         const res = await fetch("/api/stats");
@@ -56,8 +62,11 @@ export default function Home() {
         setLoading(false);
       }
     };
-    fetchStats();
-  }, []);
+
+    if (session) {
+      fetchStats();
+    }
+  }, [session]);
 
   const collectionRate =
     stats.totalLent > 0

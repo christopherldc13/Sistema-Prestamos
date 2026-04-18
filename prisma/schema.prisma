@@ -10,17 +10,24 @@ datasource db {
 
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
   name      String?
-  email     String   @unique
+  email     String     @unique
   password  String
-  role      String   @default("user") // "admin" or "user"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  role      String     @default("admin") // "superadmin" or "admin"
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  clients   Client[]
+  loans     Loan[]
+  settings  Settings?
 }
 
 model Client {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String?  @db.ObjectId
+  user        User?    @relation(fields: [userId], references: [id])
   fullName    String
   idNumber    String   @unique
   phone       String
@@ -33,6 +40,8 @@ model Client {
 
 model Loan {
   id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String?   @db.ObjectId
+  user              User?     @relation(fields: [userId], references: [id])
   amount            Float
   interestRate      Float
   rateFrequency     String    @default("monthly") // "daily" | "monthly" | "annual"
@@ -66,7 +75,8 @@ model Payment {
 
 model Settings {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  key       String   @unique
+  userId    String?  @unique @db.ObjectId
+  user      User?    @relation(fields: [userId], references: [id])
   value     Json
   updatedAt DateTime @updatedAt
 }

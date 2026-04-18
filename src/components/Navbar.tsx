@@ -22,37 +22,47 @@ export function Navbar() {
 
         {/* Desktop Links */}
         <ul className="nav-links desktop-only">
-          <li>
-            <Link href="/">
-              <LayoutDashboard size={18} /> Dashboard
-            </Link>
-          </li>
-          <li>
-            <Link href="/clients">
-              <Users size={18} /> Clientes
-            </Link>
-          </li>
-          <li>
-            <Link href="/loans">
-              <CreditCard size={18} /> Préstamos
-            </Link>
-          </li>
-          <li>
-            <Link href="/reports">
-              <BarChart3 size={18} /> Reportes
-            </Link>
-          </li>
-          <li>
-            <Link href="/settings">
-              <Settings size={18} /> Configuración
-            </Link>
-          </li>
+          {(session.user as any)?.role === "superadmin" ? (
+            <li>
+              <Link href="/superadmin">
+                <LayoutDashboard size={18} /> Panel Maestro
+              </Link>
+            </li>
+          ) : (
+            <>
+              <li>
+                <Link href="/">
+                  <LayoutDashboard size={18} /> Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link href="/clients">
+                  <Users size={18} /> Clientes
+                </Link>
+              </li>
+              <li>
+                <Link href="/loans">
+                  <CreditCard size={18} /> Préstamos
+                </Link>
+              </li>
+              <li>
+                <Link href="/reports">
+                  <BarChart3 size={18} /> Reportes
+                </Link>
+              </li>
+              <li>
+                <Link href="/settings">
+                  <Settings size={18} /> Configuración
+                </Link>
+              </li>
+            </>
+          )}
         </ul>
 
         <div className="nav-user-actions desktop-only">
           <div className="user-info">
             <User size={18} />
-            <span>{session.user?.name || "Administrador"}</span>
+            <span>{session.user?.name || "Administrador"} {(session.user as any)?.role === "superadmin" && "(Maestro)"}</span>
           </div>
           <button onClick={() => signOut({ callbackUrl: "/login" })} className="btn-logout">
             <LogOut size={18} />
@@ -70,34 +80,44 @@ export function Navbar() {
       {isOpen && (
         <div className="mobile-menu">
           <ul className="mobile-links">
-            <li>
-              <Link href="/" onClick={toggleMenu}>
-                <LayoutDashboard size={20} /> Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link href="/clients" onClick={toggleMenu}>
-                <Users size={20} /> Clientes
-              </Link>
-            </li>
-            <li>
-              <Link href="/loans" onClick={toggleMenu}>
-                <CreditCard size={20} /> Préstamos
-              </Link>
-            </li>
-            <li>
-              <Link href="/reports" onClick={toggleMenu}>
-                <BarChart3 size={20} /> Reportes
-              </Link>
-            </li>
-            <li>
-              <Link href="/settings" onClick={toggleMenu}>
-                <Settings size={20} /> Configuración
-              </Link>
-            </li>
+            {(session.user as any)?.role === "superadmin" ? (
+              <li>
+                <Link href="/superadmin" onClick={toggleMenu}>
+                  <LayoutDashboard size={20} /> Panel Maestro
+                </Link>
+              </li>
+            ) : (
+              <>
+                <li>
+                  <Link href="/" onClick={toggleMenu}>
+                    <LayoutDashboard size={20} /> Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/clients" onClick={toggleMenu}>
+                    <Users size={20} /> Clientes
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/loans" onClick={toggleMenu}>
+                    <CreditCard size={20} /> Préstamos
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/reports" onClick={toggleMenu}>
+                    <BarChart3 size={20} /> Reportes
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/settings" onClick={toggleMenu}>
+                    <Settings size={20} /> Configuración
+                  </Link>
+                </li>
+              </>
+            )}
             <li className="mobile-user-row">
               <User size={20} />
-              <span>{session.user?.name || "Admin"}</span>
+              <span>{session.user?.name || "Admin"} {(session.user as any)?.role === "superadmin" && "(Maestro)"}</span>
             </li>
             <li>
               <button onClick={() => signOut({ callbackUrl: "/login" })} className="btn-logout-mobile">

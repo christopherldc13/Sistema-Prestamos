@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { calculateLoan, isOverdue, type RateFrequency, type TermUnit, type InterestType } from "@/lib/loan-calculator";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const loans = await prisma.loan.findMany({
+            where: { userId },
             include: {
                 client: true,
                 payments: true,
@@ -14,7 +24,6 @@ export async function GET() {
             },
         });
 
-        // Auto-actualizar status overdue en tiempo real
         const updates: Promise<any>[] = [];
         for (const loan of loans) {
             const loanAny = loan as any;
@@ -35,6 +44,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const body = await req.json();
         const {
             clientId,
@@ -76,6 +92,7 @@ export async function POST(req: NextRequest) {
                 remainingBalance: result.totalToPay,
                 paymentSchedule: result.schedule as any,
                 clientId,
+                userId,
             },
         });
 
@@ -85,3 +102,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Error al crear el préstamo" }, { status: 500 });
     }
 }
+

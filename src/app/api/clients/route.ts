@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const clients = await prisma.client.findMany({
+            where: { userId },
             include: {
                 loans: true,
             },
@@ -20,6 +30,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const body = await req.json();
         const { fullName, idNumber, phone, address, email } = body;
 
@@ -34,6 +51,7 @@ export async function POST(req: NextRequest) {
                 phone,
                 address,
                 email,
+                userId,
             },
         });
 
@@ -41,7 +59,7 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error("Error creating client:", error);
         if (error.code === 'P2002') {
-            return NextResponse.json({ error: "Ya existe un cliente con esta identificación" }, { status: 400 });
+            return NextResponse.json({ error: "Ya existe un cliente con esta identificación o email en su cuenta" }, { status: 400 });
         }
         return NextResponse.json({ error: "Error al registrar cliente" }, { status: 500 });
     }

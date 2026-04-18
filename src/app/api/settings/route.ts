@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET() {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        const userId = (session.user as any).id;
+
         const settings = await prisma.settings.findUnique({
-            where: { key: "company_config" }
+            where: { userId }
         });
         
         if (!settings) {
-            // Default config if none exists
+            // Default config if none exists for this tenant
             const defaultConfig = {
-                brand: "FACT-PREST",
-                name: "FACT-PREST SRL",
-                slogan: "SOLUCIONES FINANCIERAS",
-                address: "AV. PRINCIPAL #1, 1ER NIVEL",
-                phone: "809-000-0000"
+                brand: "MI NEGOCIO",
+                name: "EMPRESA SRL",
+                slogan: "Servicios Financieros",
+                address: "-",
+                phone: "-"
             };
             return NextResponse.json(defaultConfig);
         }
@@ -28,13 +36,19 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        const userId = (session.user as any).id;
+
         const body = await req.json();
         
         const settings = await prisma.settings.upsert({
-            where: { key: "company_config" },
+            where: { userId },
             update: { value: body },
             create: {
-                key: "company_config",
+                userId,
                 value: body
             }
         });

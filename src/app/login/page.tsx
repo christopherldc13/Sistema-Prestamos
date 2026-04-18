@@ -33,7 +33,11 @@ export default function LoginPage() {
             });
 
             if (res?.error) {
-                setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+                if (res.error.includes("desactivada")) {
+                    setError("Su cuenta está suspendida. Contacte al administrador para más información.");
+                } else {
+                    setError("Credenciales incorrectas. Verifica tu correo y contraseña.");
+                }
                 triggerShake();
                 setLoading(false);
             } else {

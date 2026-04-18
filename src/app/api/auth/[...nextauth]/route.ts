@@ -3,7 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
 
-const handler = NextAuth({
+import { NextAuthOptions } from "next-auth";
+
+export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -14,20 +16,28 @@ const handler = NextAuth({
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
 
+                const emailTrimmed = credentials.email.trim();
+                const passwordTrimmed = credentials.password.trim();
+
                 const user = await prisma.user.findUnique({
-                    where: { email: credentials.email }
+                    where: { email: emailTrimmed }
                 });
 
                 if (!user) return null;
+                
+                if (user.isActive === false) {
+                    throw new Error("Su cuenta ha sido desactivada. Contacte al administrador.");
+                }
 
-                // Handle both BCrypt and Simple (for transition)
-                // In a real prod app, you'd migrate all to bcrypt
                 let isValid = false;
                 try {
-                    isValid = await compare(credentials.password, user.password);
+                    isValid = await compare(passwordTrimmed, user.password);
                 } catch (e) {
-                    // Fallback to simple comparison for existing users during migration
-                    isValid = user.password === credentials.password;
+                    // Fallback to plain text if bcrypt fails (e.g. during manual data transfers)
+                }
+
+                if (!isValid && user.password === passwordTrimmed) {
+                    isValid = true;
                 }
 
                 if (isValid) {
@@ -63,8 +73,11 @@ const handler = NextAuth({
     },
     session: {
         strategy: "jwt",
+        maxAge: 20 * 60, // 20 minutes
     },
     secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

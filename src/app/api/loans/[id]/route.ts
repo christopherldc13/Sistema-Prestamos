@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { isOverdue } from "@/lib/loan-calculator";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(
     _req: Request,
     { params }: { params: { id: string } }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const loan = await prisma.loan.findUnique({
             where: { id: params.id },
             include: {
@@ -17,8 +26,8 @@ export async function GET(
             },
         });
 
-        if (!loan) {
-            return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
+        if (!loan || loan.userId !== userId) {
+            return NextResponse.json({ error: "Préstamo no encontrado o inaccesible" }, { status: 404 });
         }
 
         // Auto-actualizar status a overdue si la fecha de vencimiento ya pasó

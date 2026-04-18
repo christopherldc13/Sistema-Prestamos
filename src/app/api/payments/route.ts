@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { isOverdue } from "@/lib/loan-calculator";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+        
+        const userId = (session.user as any).id;
+
         const body = await req.json();
         const { loanId, amount, method, date } = body;
 
@@ -15,8 +24,8 @@ export async function POST(req: NextRequest) {
 
         const loan = await prisma.loan.findUnique({ where: { id: loanId } });
 
-        if (!loan) {
-            return NextResponse.json({ error: "Préstamo no encontrado" }, { status: 404 });
+        if (!loan || loan.userId !== userId) {
+            return NextResponse.json({ error: "Préstamo no encontrado o inaccesible" }, { status: 404 });
         }
 
         if (loan.status === "paid") {
@@ -59,3 +68,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Error al registrar el pago" }, { status: 500 });
     }
 }
+
