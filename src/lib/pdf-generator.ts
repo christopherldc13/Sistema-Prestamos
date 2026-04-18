@@ -471,11 +471,23 @@ export const generatePaymentReceipt = (
     const afterBalance = Math.max(0, prevBalance - payment.amount);
 
     // ── Times ─────────────────────────────────────────────────
-    const now = new Date(payment.date || Date.now());
+    // Parse pure local date from payment.date (YYYY-MM-DD or ISO) to avoid UTC shifting
+    const pStr = (payment.date || "").split("T")[0];
+    let rawDateStr = "";
+    const fallback = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
-    const hours12 = now.getHours() % 12 || 12;
-    const ampm    = now.getHours() >= 12 ? "PM" : "AM";
-    const receiptDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}  ${pad(hours12)}:${pad(now.getMinutes())} ${ampm}`;
+
+    if (pStr && pStr.includes("-")) {
+        const [y, m, d] = pStr.split("-");
+        rawDateStr = `${d}/${m}/${y}`;
+    } else {
+        rawDateStr = `${pad(fallback.getDate())}/${pad(fallback.getMonth() + 1)}/${fallback.getFullYear()}`;
+    }
+
+    const timeSource = payment.createdAt ? new Date(payment.createdAt) : new Date();
+    const hours12 = timeSource.getHours() % 12 || 12;
+    const ampm    = timeSource.getHours() >= 12 ? "PM" : "AM";
+    const receiptDate = `${rawDateStr}  ${pad(hours12)}:${pad(timeSource.getMinutes())} ${ampm}`;
 
     const dueDateObj: Date = loan.dueDate
         ? new Date(loan.dueDate)
