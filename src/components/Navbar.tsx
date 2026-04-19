@@ -12,9 +12,11 @@ import { getPlan, type PlanId } from "@/lib/plans";
 
 function getLicenseInfo(expiresAt: string | null) {
   if (!expiresAt) return null;
-  const now = new Date();
   const exp = new Date(expiresAt);
-  const daysLeft = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  // Compare as UTC dates (strip time) to avoid timezone offset shifting the day count
+  const nowUTC = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+  const expUTC = Date.UTC(exp.getUTCFullYear(), exp.getUTCMonth(), exp.getUTCDate());
+  const daysLeft = Math.round((expUTC - nowUTC) / (1000 * 60 * 60 * 24));
   return { daysLeft, expired: daysLeft < 0, expDate: exp };
 }
 
@@ -478,10 +480,10 @@ export function Navbar() {
         <div className={`license-banner ${licInfo!.expired ? "banner-expired" : licInfo!.daysLeft <= 7 ? "banner-critical" : "banner-warning"}`}>
           <AlertTriangle size={16} />
           {licInfo!.expired
-            ? <>Tu licencia venció el <strong>{licInfo!.expDate.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</strong>. Contacta a tu proveedor para renovar.</>
+            ? <>Tu licencia venció el <strong>{licInfo!.expDate.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}</strong>. Contacta a tu proveedor para renovar.</>
             : licInfo!.daysLeft <= 7
               ? <>⚠️ Tu licencia vence en <strong>{licInfo!.daysLeft} día{licInfo!.daysLeft !== 1 ? "s" : ""}</strong>. Renueva pronto para no perder el acceso.</>
-              : <>Tu licencia vence el <strong>{licInfo!.expDate.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</strong> — quedan {licInfo!.daysLeft} días.</>
+              : <>Tu licencia vence el <strong>{licInfo!.expDate.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}</strong> — quedan {licInfo!.daysLeft} días.</>
           }
           <style>{`
             .license-banner {
