@@ -18,9 +18,13 @@ export interface PlanFeatures {
   hasExport: boolean;
   // Personalización
   hasCustomBranding: boolean;
-  // Presentación
+  // Precios mensual
   price: string;
   priceNote: string;
+  // Precios anual (2 meses gratis)
+  priceAnnual: string;
+  priceAnnualNote: string;
+  priceAnnualSaving: string;
   color: string;
   gradient: string;
   badge?: string;
@@ -43,6 +47,9 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasCustomBranding: false,
     price: "RD$ 800",
     priceNote: "/mes",
+    priceAnnual: "RD$ 8,000",
+    priceAnnualNote: "/año",
+    priceAnnualSaving: "Ahorras RD$ 1,600",
     color: "#6b7280",
     gradient: "linear-gradient(135deg, #374151, #4b5563)",
   },
@@ -62,6 +69,9 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasCustomBranding: true,
     price: "RD$ 1,500",
     priceNote: "/mes",
+    priceAnnual: "RD$ 15,000",
+    priceAnnualNote: "/año",
+    priceAnnualSaving: "Ahorras RD$ 3,000",
     color: "#3b82f6",
     gradient: "linear-gradient(135deg, #1d4ed8, #3b82f6)",
     badge: "Popular",
@@ -82,6 +92,9 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasCustomBranding: true,
     price: "RD$ 3,000",
     priceNote: "/mes",
+    priceAnnual: "RD$ 30,000",
+    priceAnnualNote: "/año",
+    priceAnnualSaving: "Ahorras RD$ 6,000",
     color: "#a855f7",
     gradient: "linear-gradient(135deg, #7c3aed, #a855f7)",
     badge: "Pro",
