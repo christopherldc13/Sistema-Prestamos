@@ -7,8 +7,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     ShieldCheck, UserPlus, CheckCircle, Ban, Users,
     DollarSign, AlertTriangle, KeyRound, X, Calendar, Phone, Search,
-    Building2, TrendingUp, Clock, Trash2
+    Building2, TrendingUp, Clock, Trash2, Zap
 } from "lucide-react";
+import { PLANS, getPlan, type PlanId } from "@/lib/plans";
 
 interface UserStats {
     clients: number;
@@ -27,6 +28,7 @@ interface AdminUser {
     role: string;
     isActive: boolean;
     licenseExpiresAt?: string;
+    subscriptionPlan?: string;
     createdAt: string;
     stats: UserStats;
 }
@@ -45,7 +47,7 @@ interface GlobalStats {
     expiredCount: number;
 }
 
-type ModalType = "create" | "resetPassword" | "editLicense" | null;
+type ModalType = "create" | "resetPassword" | "editLicense" | "editPlan" | null;
 
 function getLicenseStatus(expiresAt?: string) {
     if (!expiresAt) return "none";
@@ -77,6 +79,7 @@ export default function SuperadminDashboard() {
     });
     const [resetPassword, setResetPassword] = useState("");
     const [newExpiry, setNewExpiry] = useState("");
+    const [selectedPlan, setSelectedPlan] = useState<PlanId>("basic");
 
     useEffect(() => {
         if (status === "unauthenticated") router.push("/login");
@@ -150,6 +153,22 @@ export default function SuperadminDashboard() {
             setModal(null); setResetPassword("");
         } else {
             showMsg("Error al restablecer contraseña", "error");
+        }
+    };
+
+    const handleChangePlan = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedUser) return;
+        const res = await fetch(`/api/superadmin/users/${selectedUser.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ subscriptionPlan: selectedPlan }),
+        });
+        if (res.ok) {
+            showMsg(`Plan actualizado a ${getPlan(selectedPlan).name}`);
+            setModal(null); fetchAll();
+        } else {
+            showMsg("Error al actualizar el plan", "error");
         }
     };
 
@@ -270,6 +289,7 @@ export default function SuperadminDashboard() {
                                 <th>Contacto</th>
                                 <th>Cartera</th>
                                 <th>Préstamos</th>
+                                <th>Plan</th>
                                 <th>Licencia</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -312,6 +332,22 @@ export default function SuperadminDashboard() {
                                                 </div>
                                             )}
                                         </td>
+                                        <td data-label="Plan">
+                                            {u.role === "superadmin" ? (
+                                                <span className="sa-badge badge-super">Maestro</span>
+                                            ) : (() => {
+                                                const p = getPlan(u.subscriptionPlan ?? "basic");
+                                                return (
+                                                    <button
+                                                        className="sa-plan-btn"
+                                                        style={{ borderColor: p.color + "55", color: p.color }}
+                                                        onClick={() => { setSelectedUser(u); setSelectedPlan((u.subscriptionPlan ?? "basic") as PlanId); setModal("editPlan"); }}
+                                                    >
+                                                        <Zap size={11} /> {p.name}
+                                                    </button>
+                                                );
+                                            })()}
+                                        </td>
                                         <td data-label="Licencia">
                                             {u.role === "superadmin" ? (
                                                 <span className="sa-badge badge-super">Permanente</span>
@@ -352,7 +388,7 @@ export default function SuperadminDashboard() {
                                 );
                             })}
                             {filtered.length === 0 && (
-                                <tr><td colSpan={7} className="sa-empty">No hay resultados que coincidan.</td></tr>
+                                <tr><td colSpan={8} className="sa-empty">No hay resultados que coincidan.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -432,6 +468,35 @@ export default function SuperadminDashboard() {
                                                 placeholder="Nueva contraseña segura" minLength={6} required />
                                         </div>
                                         <button type="submit" className="sa-btn-warning">Restablecer Contraseña</button>
+                                    </form>
+                                </>
+                            )}
+
+                            {/* EDIT PLAN */}
+                            {modal === "editPlan" && selectedUser && (
+                                <>
+                                    <div className="sa-modal-header">
+                                        <div className="sa-modal-title"><Zap size={20} color="#a855f7" /> Cambiar Plan</div>
+                                        <button className="sa-close-btn" onClick={() => setModal(null)}><X size={20} /></button>
+                                    </div>
+                                    <p className="sa-modal-sub">Plan de <strong>{selectedUser.name || selectedUser.email}</strong></p>
+                                    <form onSubmit={handleChangePlan} className="sa-form">
+                                        <div className="sa-plan-options">
+                                            {(["basic", "intermediate", "premium"] as PlanId[]).map(pid => {
+                                                const p = PLANS[pid];
+                                                return (
+                                                    <label key={pid} className={`sa-plan-option ${selectedPlan === pid ? "selected" : ""}`} style={selectedPlan === pid ? { borderColor: p.color, background: p.color + "15" } : {}}>
+                                                        <input type="radio" name="plan" value={pid} checked={selectedPlan === pid} onChange={() => setSelectedPlan(pid)} />
+                                                        <div className="sa-plan-opt-body">
+                                                            <span className="sa-plan-opt-name" style={{ color: selectedPlan === pid ? p.color : undefined }}>{p.name}</span>
+                                                            <span className="sa-plan-opt-desc">{p.tagline}</span>
+                                                            <span className="sa-plan-opt-price">{p.price}{p.priceNote}</span>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        <button type="submit" className="sa-btn-primary">Aplicar Plan</button>
                                     </form>
                                 </>
                             )}
@@ -567,6 +632,19 @@ const SA_STYLES = `
 .sa-btn-primary:hover { transform: translateY(-1px); }
 .sa-btn-warning { background: linear-gradient(135deg,#d97706,#b45309); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
 .sa-btn-success { background: linear-gradient(135deg,#059669,#047857); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+
+/* Plan button in table */
+.sa-plan-btn { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.04); border: 1px solid; padding: 0.3rem 0.7rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; text-transform: uppercase; letter-spacing: 0.04em; }
+.sa-plan-btn:hover { opacity: 0.75; }
+
+/* Plan options in modal */
+.sa-plan-options { display: flex; flex-direction: column; gap: 0.75rem; }
+.sa-plan-option { display: flex; align-items: center; gap: 1rem; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem 1.25rem; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.2); }
+.sa-plan-option input[type="radio"] { accent-color: #a855f7; width: 16px; height: 16px; flex-shrink: 0; }
+.sa-plan-opt-body { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+.sa-plan-opt-name { font-weight: 700; font-size: 0.95rem; color: white; }
+.sa-plan-opt-desc { font-size: 0.78rem; color: #64748b; }
+.sa-plan-opt-price { font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-top: 0.25rem; }
 
 .sa-spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

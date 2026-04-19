@@ -24,11 +24,12 @@ export async function PUT(
         if (body.newPassword) safeData.password = await hash(body.newPassword, 12);
 
         // ── Campos NUEVOS que requieren "npx prisma generate" ──
-        const hasNewFields = body.phone !== undefined || body.licenseExpiresAt !== undefined;
+        const hasNewFields = body.phone !== undefined || body.licenseExpiresAt !== undefined || body.subscriptionPlan !== undefined;
 
         if (hasNewFields) {
             const newFieldsData: any = { ...safeData };
             if (body.phone !== undefined) newFieldsData.phone = body.phone || null;
+            if (body.subscriptionPlan !== undefined) newFieldsData.subscriptionPlan = body.subscriptionPlan;
             if (body.licenseExpiresAt !== undefined) {
                 newFieldsData.licenseExpiresAt = body.licenseExpiresAt
                     ? new Date(body.licenseExpiresAt)

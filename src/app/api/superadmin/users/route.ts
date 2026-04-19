@@ -19,7 +19,7 @@ export async function GET() {
                 select: {
                     id: true, name: true, email: true, phone: true,
                     role: true, isActive: true, licenseExpiresAt: true,
-                    createdAt: true,
+                    subscriptionPlan: true, createdAt: true,
                     _count: { select: { clients: true, loans: true } },
                 },
             });
@@ -51,6 +51,7 @@ export async function GET() {
                     ...u,
                     phone: u.phone ?? null,
                     licenseExpiresAt: u.licenseExpiresAt ?? null,
+                    subscriptionPlan: u.subscriptionPlan ?? "basic",
                     stats: {
                         clients: u._count?.clients ?? 0,
                         loans: u._count?.loans ?? 0,
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
         const extendedData: any = { ...createData };
         if (body.phone) extendedData.phone = body.phone;
         if (body.licenseExpiresAt) extendedData.licenseExpiresAt = new Date(body.licenseExpiresAt);
+        if (body.subscriptionPlan) extendedData.subscriptionPlan = body.subscriptionPlan;
 
         let user;
         try {

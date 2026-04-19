@@ -13,13 +13,19 @@ import {
     Download,
     RefreshCcw,
     CreditCard,
-    Target
+    Target,
+    Lock,
+    Zap
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { getPlan, type PlanFeatures } from "@/lib/plans";
 
 export default function ReportsPage() {
+    const router = useRouter();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
 
     const fetchReports = async () => {
         setLoading(true);
@@ -36,6 +42,10 @@ export default function ReportsPage() {
 
     useEffect(() => {
         fetchReports();
+        fetch("/api/me")
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
+            .catch(() => {});
     }, []);
 
     if (loading && !data) {
@@ -62,9 +72,15 @@ export default function ReportsPage() {
                     <button className="btn-filter-soft">
                         <Filter size={16} /> <span>Filtrar Período</span>
                     </button>
-                    <button className="btn-export-premium">
-                        <Download size={16} /> <span>Exportar Data</span>
-                    </button>
+                    {plan.hasExport ? (
+                        <button className="btn-export-premium">
+                            <Download size={16} /> <span>Exportar Data</span>
+                        </button>
+                    ) : (
+                        <button className="btn-export-locked" onClick={() => router.push("/plans")} title="Disponible en Plan Premium">
+                            <Lock size={14} /> <span>Exportar Data</span> <span className="locked-badge">Premium</span>
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -193,38 +209,51 @@ export default function ReportsPage() {
 
                 {/* Vertical Analytics Sidebar */}
                 <aside className="analytics-sidebar">
-                    <div className="glass-card sidebar-stat-card">
-                        <h3>Tasa de Recuperación</h3>
-                        <div className="circular-progress-wrap">
-                            <svg viewBox="0 0 36 36" className="circular-chart indigo">
-                                <path className="circle-bg"
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                />
-                                <path className="circle"
-                                    strokeDasharray={`${recoveryRate}, 100`}
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                />
-                                <text x="18" y="20.35" className="percentage">{Math.round(recoveryRate)}%</text>
-                            </svg>
-                        </div>
-                        <p className="sidebar-hint">Capital recaudado vs Total desembolsado</p>
-                    </div>
+                    {plan.hasAdvancedReports ? (
+                        <>
+                            <div className="glass-card sidebar-stat-card">
+                                <h3>Tasa de Recuperación</h3>
+                                <div className="circular-progress-wrap">
+                                    <svg viewBox="0 0 36 36" className="circular-chart indigo">
+                                        <path className="circle-bg"
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                        <path className="circle"
+                                            strokeDasharray={`${recoveryRate}, 100`}
+                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        />
+                                        <text x="18" y="20.35" className="percentage">{Math.round(recoveryRate)}%</text>
+                                    </svg>
+                                </div>
+                                <p className="sidebar-hint">Capital recaudado vs Total desembolsado</p>
+                            </div>
 
-                    <div className="glass-card sidebar-stat-card">
-                        <h3>Cartera de Préstamos</h3>
-                        <div className="stat-row">
-                            <span className="s-label">Créditos Activos</span>
-                            <span className="s-val text-indigo">{stats?.activeLoans}</span>
+                            <div className="glass-card sidebar-stat-card">
+                                <h3>Cartera de Préstamos</h3>
+                                <div className="stat-row">
+                                    <span className="s-label">Créditos Activos</span>
+                                    <span className="s-val text-indigo">{stats?.activeLoans}</span>
+                                </div>
+                                <div className="stat-row">
+                                    <span className="s-label">Créditos Liquidados</span>
+                                    <span className="s-val text-green">{stats?.paidLoans}</span>
+                                </div>
+                                <div className="stat-row total-border">
+                                    <span className="s-label">Total Histórico</span>
+                                    <span className="s-val">{(stats?.activeLoans || 0) + (stats?.paidLoans || 0)}</span>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="glass-card sidebar-locked" onClick={() => router.push("/plans")}>
+                            <Lock size={28} className="lock-icon-lg" />
+                            <h3>Analíticas Avanzadas</h3>
+                            <p>Tasa de recuperación, cartera detallada y más. Disponible en Plan Intermedio o superior.</p>
+                            <button className="btn-upgrade-inline">
+                                <Zap size={14} /> Ver Planes
+                            </button>
                         </div>
-                        <div className="stat-row">
-                            <span className="s-label">Créditos Liquidados</span>
-                            <span className="s-val text-green">{stats?.paidLoans}</span>
-                        </div>
-                        <div className="stat-row total-border">
-                            <span className="s-label">Total Histórico</span>
-                            <span className="s-val">{(stats?.activeLoans || 0) + (stats?.paidLoans || 0)}</span>
-                        </div>
-                    </div>
+                    )}
                 </aside>
             </div>
 
@@ -240,6 +269,15 @@ export default function ReportsPage() {
                 .btn-filter-soft:hover { background: rgba(255,255,255,0.06); color: white; }
                 .btn-export-premium { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
                 .btn-export-premium:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.5); }
+                .btn-export-locked { background: rgba(255,255,255,0.04); color: #64748b; border: 1px solid rgba(255,255,255,0.08); padding: 0.75rem 1.25rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s; }
+                .btn-export-locked:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+                .locked-badge { background: rgba(168,85,247,0.2); color: #c084fc; padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 800; }
+                .sidebar-locked { padding: 2rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; cursor: pointer; border: 1px dashed rgba(255,255,255,0.1) !important; transition: border-color 0.2s; }
+                .sidebar-locked:hover { border-color: rgba(168,85,247,0.4) !important; }
+                .lock-icon-lg { color: #475569; }
+                .sidebar-locked h3 { font-size: 1rem; font-weight: 700; color: white; margin: 0; }
+                .sidebar-locked p { font-size: 0.82rem; color: #64748b; line-height: 1.5; margin: 0; }
+                .btn-upgrade-inline { display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg,#7c3aed,#a855f7); color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
 
                 .stats-header-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
                 .kpi-card { padding: 2rem; position: relative; overflow: hidden; border-radius: 20px; }

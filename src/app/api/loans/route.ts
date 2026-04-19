@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { calculateLoan, isOverdue, type RateFrequency, type TermUnit, type InterestType } from "@/lib/loan-calculator";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getPlan } from "@/lib/plans";
 
 export async function GET() {
     try {
@@ -10,7 +11,7 @@ export async function GET() {
         if (!session || !session.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        
+
         const userId = (session.user as any).id;
 
         const loans = await prisma.loan.findMany({
@@ -48,8 +49,31 @@ export async function POST(req: NextRequest) {
         if (!session || !session.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        
+
         const userId = (session.user as any).id;
+
+        // Verificar límite de préstamos activos según plan
+        try {
+            const user = await (prisma.user.findUnique as any)({
+                where: { id: userId },
+                select: { subscriptionPlan: true },
+            });
+            const plan = getPlan(user?.subscriptionPlan ?? "basic");
+            if (plan.maxActiveLoans !== -1) {
+                const activeLoans = await prisma.loan.count({
+                    where: { userId, status: { in: ["active", "overdue"] } },
+                });
+                if (activeLoans >= plan.maxActiveLoans) {
+                    return NextResponse.json({
+                        error: `Tu plan ${plan.name} permite máximo ${plan.maxActiveLoans} préstamos activos. Actualiza tu plan para crear más.`,
+                        limitReached: true,
+                        currentPlan: plan.id,
+                    }, { status: 403 });
+                }
+            }
+        } catch {
+            // Si el campo no existe aún, continuar sin restricción
+        }
 
         const body = await req.json();
         const {
@@ -102,4 +126,3 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Error al crear el préstamo" }, { status: 500 });
     }
 }
-

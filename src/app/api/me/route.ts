@@ -12,19 +12,20 @@ export async function GET() {
     try {
         const userId = (session.user as any).id;
 
-        // Intentar leer licenseExpiresAt; si no existe aún (pre prisma generate), devuelve null
         let licenseExpiresAt: Date | null = null;
+        let subscriptionPlan: string = "basic";
         try {
             const user = await (prisma.user.findUnique as any)({
                 where: { id: userId },
-                select: { licenseExpiresAt: true },
+                select: { licenseExpiresAt: true, subscriptionPlan: true },
             });
             licenseExpiresAt = user?.licenseExpiresAt ?? null;
+            subscriptionPlan = user?.subscriptionPlan ?? "basic";
         } catch {
             // Campo no disponible aún — ignorar
         }
 
-        return NextResponse.json({ licenseExpiresAt });
+        return NextResponse.json({ licenseExpiresAt, subscriptionPlan });
     } catch (error) {
         return NextResponse.json({ error: "Error" }, { status: 500 });
     }

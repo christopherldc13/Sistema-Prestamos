@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getPlan } from "@/lib/plans";
 
 export async function GET() {
     try {
@@ -9,7 +10,7 @@ export async function GET() {
         if (!session || !session.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        
+
         const userId = (session.user as any).id;
 
         const clients = await prisma.client.findMany({
@@ -34,8 +35,29 @@ export async function POST(req: NextRequest) {
         if (!session || !session.user) {
             return NextResponse.json({ error: "No autorizado" }, { status: 401 });
         }
-        
+
         const userId = (session.user as any).id;
+
+        // Verificar límite de clientes según plan
+        try {
+            const user = await (prisma.user.findUnique as any)({
+                where: { id: userId },
+                select: { subscriptionPlan: true },
+            });
+            const plan = getPlan(user?.subscriptionPlan ?? "basic");
+            if (plan.maxClients !== -1) {
+                const clientCount = await prisma.client.count({ where: { userId } });
+                if (clientCount >= plan.maxClients) {
+                    return NextResponse.json({
+                        error: `Tu plan ${plan.name} permite máximo ${plan.maxClients} clientes. Actualiza tu plan para agregar más.`,
+                        limitReached: true,
+                        currentPlan: plan.id,
+                    }, { status: 403 });
+                }
+            }
+        } catch {
+            // Si el campo no existe aún, continuar sin restricción
+        }
 
         const body = await req.json();
         const { fullName, idNumber, phone, address, email } = body;

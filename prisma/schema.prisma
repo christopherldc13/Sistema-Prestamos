@@ -18,6 +18,7 @@ model User {
   isActive           Boolean    @default(true)
   phone              String?
   licenseExpiresAt   DateTime?
+  subscriptionPlan   String     @default("basic")
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
     CreditCard, Calendar, Percent, Clock, User, ChevronLeft,
     Info, DollarSign, CheckCircle2, Calculator, TrendingUp,
-    Wallet, AlertCircle, Table2
+    Wallet, AlertCircle, Table2, Lock, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
     type TermUnit,
     type InterestType,
 } from "@/lib/loan-calculator";
+import { getPlan, type PlanFeatures } from "@/lib/plans";
 
 const RATE_FREQ_LABELS: Record<RateFrequency, string> = {
     daily: "Diaria",
@@ -34,6 +35,7 @@ export default function CreateLoanPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
+    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
 
     const [formData, setFormData] = useState({
         clientId: "",
@@ -42,7 +44,7 @@ export default function CreateLoanPage() {
         rateFrequency: "monthly" as RateFrequency,
         term: "12",
         termUnit: "months" as TermUnit,
-        interestType: "compound" as InterestType,
+        interestType: "simple" as InterestType,
         startDate: new Date().toISOString().split("T")[0],
     });
 
@@ -52,6 +54,10 @@ export default function CreateLoanPage() {
             .then(d => { if (Array.isArray(d)) setClients(d); })
             .catch(console.error)
             .finally(() => setLoading(false));
+        fetch("/api/me")
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
+            .catch(() => {});
     }, []);
 
     const calc = useMemo(() => {
@@ -245,13 +251,25 @@ export default function CreateLoanPage() {
                                 >
                                     Interés Simple
                                 </button>
-                                <button
-                                    type="button"
-                                    className={`segment-btn ${formData.interestType === "compound" ? "active" : ""}`}
-                                    onClick={() => setFormData({ ...formData, interestType: "compound" })}
-                                >
-                                    Amortización Francesa
-                                </button>
+                                {plan.hasFrenchAmortization ? (
+                                    <button
+                                        type="button"
+                                        className={`segment-btn ${formData.interestType === "compound" ? "active" : ""}`}
+                                        onClick={() => setFormData({ ...formData, interestType: "compound" })}
+                                    >
+                                        Amortización Francesa
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="segment-btn segment-btn-locked"
+                                        onClick={() => router.push("/plans")}
+                                        title="Disponible desde Plan Intermedio"
+                                    >
+                                        <Lock size={13} /> Amortización Francesa
+                                        <span className="seg-lock-badge">Intermedio</span>
+                                    </button>
+                                )}
                             </div>
                             <p className="method-hint">
                                 {formData.interestType === "simple"
@@ -325,14 +343,26 @@ export default function CreateLoanPage() {
                                 </div>
 
                                 {/* Toggle tabla de amortización */}
-                                <button
-                                    type="button"
-                                    className="btn-toggle-schedule"
-                                    onClick={() => setShowSchedule(v => !v)}
-                                >
-                                    <Table2 size={14} />
-                                    {showSchedule ? "Ocultar" : "Ver"} Tabla de Amortización ({calc.schedule.length} cuotas)
-                                </button>
+                                {plan.hasAmortizationTable ? (
+                                    <button
+                                        type="button"
+                                        className="btn-toggle-schedule"
+                                        onClick={() => setShowSchedule(v => !v)}
+                                    >
+                                        <Table2 size={14} />
+                                        {showSchedule ? "Ocultar" : "Ver"} Tabla de Amortización ({calc.schedule.length} cuotas)
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="btn-toggle-schedule btn-toggle-locked"
+                                        onClick={() => router.push("/plans")}
+                                    >
+                                        <Lock size={14} />
+                                        Tabla de Amortización
+                                        <span className="seg-lock-badge">Intermedio+</span>
+                                    </button>
+                                )}
 
                                 <AnimatePresence>
                                     {showSchedule && (
@@ -425,8 +455,13 @@ export default function CreateLoanPage() {
         .select-pro-unit { background: rgba(255,255,255,0.03); border: none; color: #94a3b8; font-weight: 700; width: 45%; outline: none; text-align: center; border-left: 1px solid var(--border); cursor: pointer; font-size: 0.8rem; }
 
         .segmented-control { display: flex; background: rgba(15,23,42,0.6); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 0.75rem; }
-        .segment-btn { flex: 1; border: none; background: transparent; color: #64748b; padding: 0.75rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; }
+        .segment-btn { flex: 1; border: none; background: transparent; color: #64748b; padding: 0.75rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
         .segment-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+        .segment-btn-locked { color: #4b5563 !important; cursor: pointer; border: 1px dashed rgba(245,158,11,0.25) !important; }
+        .segment-btn-locked:hover { background: rgba(245,158,11,0.08) !important; color: #fbbf24 !important; }
+        .seg-lock-badge { background: rgba(245,158,11,0.15); color: #f59e0b; padding: 0.1rem 0.45rem; border-radius: 99px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.03em; }
+        .btn-toggle-locked { color: #4b5563 !important; border-color: rgba(245,158,11,0.25) !important; }
+        .btn-toggle-locked:hover { color: #fbbf24 !important; border-color: rgba(245,158,11,0.5) !important; background: rgba(245,158,11,0.06) !important; }
         .method-hint { font-size: 0.8rem; color: #475569; line-height: 1.5; padding-left: 0.5rem; }
 
         .btn-submit-loan { width: 100%; background: #6366f1; color: white; border: none; padding: 1.25rem; border-radius: 14px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.75rem; cursor: pointer; transition: all 0.3s; margin-top: 1rem; box-shadow: 0 10px 20px -5px rgba(99,102,241,0.4); }

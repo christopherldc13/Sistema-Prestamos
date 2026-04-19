@@ -13,6 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { generateLoanReceipt, generatePaymentReceipt, generateAccountStatement, CompanyConfig } from "@/lib/pdf-generator";
+import { getPlan, type PlanFeatures } from "@/lib/plans";
+import { Lock, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type AmortRow = {
     installmentNumber: number;
@@ -25,6 +28,7 @@ type AmortRow = {
 
 export default function LoanDetailsPage() {
     const params = useParams();
+    const router = useRouter();
     const { data: session } = useSession();
     const [loan, setLoan] = useState<any>(null);
     const [companyConfig, setCompanyConfig] = useState<CompanyConfig | undefined>(undefined);
@@ -32,6 +36,7 @@ export default function LoanDetailsPage() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
+    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
 
     const [paymentForm, setPaymentForm] = useState({
         amount: "",
@@ -67,6 +72,10 @@ export default function LoanDetailsPage() {
 
     useEffect(() => {
         if (params.id) { fetchLoanData(); fetchCompanyConfig(); }
+        fetch("/api/me")
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
+            .catch(() => {});
     }, [params.id]);
 
     const handlePayment = async (e: React.FormEvent) => {
@@ -228,14 +237,32 @@ export default function LoanDetailsPage() {
                             <PlusCircle size={18} />
                             <span>Registrar Abono</span>
                         </button>
-                        <button className="btn-download-pro" onClick={() => generateLoanReceipt(loan, companyConfig)}>
-                            <Download size={18} />
-                            <span>Contrato PDF</span>
-                        </button>
-                        <button className="btn-download-pro" onClick={() => generateAccountStatement(loan, companyConfig)}>
-                            <BookOpen size={18} />
-                            <span>Estado de Cuenta</span>
-                        </button>
+
+                        {plan.hasContractPDF ? (
+                            <button className="btn-download-pro" onClick={() => generateLoanReceipt(loan, companyConfig)}>
+                                <Download size={18} />
+                                <span>Contrato PDF</span>
+                            </button>
+                        ) : (
+                            <button className="btn-locked-action" onClick={() => router.push("/plans")} title="Disponible desde Plan Intermedio">
+                                <Lock size={16} />
+                                <span>Contrato PDF</span>
+                                <span className="lock-plan-badge">Intermedio</span>
+                            </button>
+                        )}
+
+                        {plan.hasStatementPDF ? (
+                            <button className="btn-download-pro" onClick={() => generateAccountStatement(loan, companyConfig)}>
+                                <BookOpen size={18} />
+                                <span>Estado de Cuenta</span>
+                            </button>
+                        ) : (
+                            <button className="btn-locked-action" onClick={() => router.push("/plans")} title="Disponible desde Plan Intermedio">
+                                <Lock size={16} />
+                                <span>Estado de Cuenta</span>
+                                <span className="lock-plan-badge">Intermedio</span>
+                            </button>
+                        )}
                     </div>
                 </motion.div>
 
@@ -362,10 +389,26 @@ export default function LoanDetailsPage() {
                             <Table2 size={20} className="icon-main" />
                             <h2>Tabla de Amortización</h2>
                         </div>
-                        <button className="btn-toggle-amort" onClick={() => setShowSchedule(v => !v)}>
-                            {showSchedule ? "Ocultar" : "Ver tabla"} ({schedule.length} cuotas)
-                        </button>
+                        {plan.hasAmortizationTable ? (
+                            <button className="btn-toggle-amort" onClick={() => setShowSchedule(v => !v)}>
+                                {showSchedule ? "Ocultar" : "Ver tabla"} ({schedule.length} cuotas)
+                            </button>
+                        ) : (
+                            <button className="btn-locked-sm" onClick={() => router.push("/plans")}>
+                                <Lock size={13} /> Intermedio+
+                            </button>
+                        )}
                     </header>
+                    {!plan.hasAmortizationTable && (
+                        <div className="amort-locked-block" onClick={() => router.push("/plans")}>
+                            <Lock size={24} />
+                            <div>
+                                <strong>Tabla de Amortización bloqueada</strong>
+                                <p>Disponible en Plan Intermedio o superior. Ver el desglose completo de cuotas, capital e interés por período.</p>
+                            </div>
+                            <button className="btn-upgrade-sm"><Zap size={13} /> Actualizar Plan</button>
+                        </div>
+                    )}
 
                     <AnimatePresence>
                         {showSchedule && (
@@ -427,76 +470,104 @@ export default function LoanDetailsPage() {
                         <History size={20} className="icon-main" />
                         <h2>Trazabilidad de Abonos</h2>
                     </div>
-                    <span className="h-count">{loan.payments.length} Registros</span>
+                    <div className="h-count-group">
+                        <span className="h-count">{loan.payments.length} Registros</span>
+                        {plan.maxPaymentHistory !== -1 && loan.payments.length > plan.maxPaymentHistory && (
+                            <span className="h-limit-badge">Mostrando últimos {plan.maxPaymentHistory}</span>
+                        )}
+                    </div>
                 </header>
 
-                <div className="glass-card history-container-glass desktop-only-table">
-                    <table className="pro-table-alt">
-                        <thead>
-                            <tr>
-                                <th>Fecha del Pago</th>
-                                <th>Monto del Abono</th>
-                                <th>Medio de Pago</th>
-                                <th className="text-right">Comprobante</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loan.payments.length > 0 ? (
-                                loan.payments.map((p: any) => (
-                                    <tr key={p.id} className="row-alt-hover">
-                                        <td>
-                                            <div className="date-cell">
-                                                <Calendar size={14} className="dim" />
-                                                {new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
+                {(() => {
+                    const visiblePayments = plan.maxPaymentHistory === -1
+                        ? loan.payments
+                        : [...loan.payments].slice(-plan.maxPaymentHistory);
+                    return (
+                        <>
+                        <div className="glass-card history-container-glass desktop-only-table">
+                            <table className="pro-table-alt">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha del Pago</th>
+                                        <th>Monto del Abono</th>
+                                        <th>Medio de Pago</th>
+                                        <th className="text-right">Comprobante</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {visiblePayments.length > 0 ? (
+                                        visiblePayments.map((p: any) => (
+                                            <tr key={p.id} className="row-alt-hover">
+                                                <td>
+                                                    <div className="date-cell">
+                                                        <Calendar size={14} className="dim" />
+                                                        {new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
+                                                    </div>
+                                                </td>
+                                                <td><span className="amount-pigo">+${fmtCurrency(p.amount)}</span></td>
+                                                <td><span className="method-tag">{p.method.toUpperCase()}</span></td>
+                                                <td className="text-right">
+                                                    <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
+                                                        <Download size={14} /><span>Recibo</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={4} className="empty-state-table">
+                                                <div className="empty-icon-box"><CreditCard size={32} /></div>
+                                                <p>Aún no se han registrado abonos para este préstamo.</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                            {plan.maxPaymentHistory !== -1 && loan.payments.length > plan.maxPaymentHistory && (
+                                <div className="history-limit-row" onClick={() => router.push("/plans")}>
+                                    <Lock size={14} />
+                                    <span>{loan.payments.length - plan.maxPaymentHistory} pagos anteriores ocultos — actualiza tu plan para ver el historial completo</span>
+                                    <button className="btn-upgrade-sm"><Zap size={13} /> Ver Planes</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mobile-only-cards">
+                            {visiblePayments.length > 0 ? (
+                                visiblePayments.map((p: any) => (
+                                    <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card payment-mobile-card">
+                                        <div className="p-m-top">
+                                            <div className="p-m-date">
+                                                <Calendar size={12} />
+                                                <span>{new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
                                             </div>
-                                        </td>
-                                        <td><span className="amount-pigo">+${fmtCurrency(p.amount)}</span></td>
-                                        <td><span className="method-tag">{p.method.toUpperCase()}</span></td>
-                                        <td className="text-right">
+                                            <span className="method-tag">{p.method.toUpperCase()}</span>
+                                        </div>
+                                        <div className="p-m-main">
+                                            <span className="amount-pigo">+${fmtCurrency(p.amount)}</span>
                                             <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
                                                 <Download size={14} /><span>Recibo</span>
                                             </button>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </motion.div>
                                 ))
                             ) : (
-                                <tr>
-                                    <td colSpan={4} className="empty-state-table">
-                                        <div className="empty-icon-box"><CreditCard size={32} /></div>
-                                        <p>Aún no se han registrado abonos para este préstamo.</p>
-                                    </td>
-                                </tr>
+                                <div className="glass-card empty-state-mobile">
+                                    <CreditCard size={24} className="dim" />
+                                    <p>No hay abonos registrados.</p>
+                                </div>
                             )}
-                        </tbody>
-                    </table>
-                </div>
-
-                <div className="mobile-only-cards">
-                    {loan.payments.length > 0 ? (
-                        loan.payments.map((p: any) => (
-                            <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card payment-mobile-card">
-                                <div className="p-m-top">
-                                    <div className="p-m-date">
-                                        <Calendar size={12} />
-                                        <span>{new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
-                                    </div>
-                                    <span className="method-tag">{p.method.toUpperCase()}</span>
+                            {plan.maxPaymentHistory !== -1 && loan.payments.length > plan.maxPaymentHistory && (
+                                <div className="history-limit-row" onClick={() => router.push("/plans")}>
+                                    <Lock size={14} />
+                                    <span>{loan.payments.length - plan.maxPaymentHistory} pagos ocultos</span>
+                                    <button className="btn-upgrade-sm"><Zap size={13} /> Planes</button>
                                 </div>
-                                <div className="p-m-main">
-                                    <span className="amount-pigo">+${fmtCurrency(p.amount)}</span>
-                                    <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
-                                        <Download size={14} /><span>Recibo</span>
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))
-                    ) : (
-                        <div className="glass-card empty-state-mobile">
-                            <CreditCard size={24} className="dim" />
-                            <p>No hay abonos registrados.</p>
+                            )}
                         </div>
-                    )}
-                </div>
+                        </>
+                    );
+                })()}
             </section>
 
             {/* Payment Modal */}
@@ -684,6 +755,20 @@ export default function LoanDetailsPage() {
         .btn-pay-pro:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-download-pro { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.08); padding: 0.9rem 1.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s; }
         .btn-download-pro:hover { background: rgba(255,255,255,0.08); color: white; }
+        .btn-locked-action { background: rgba(245,158,11,0.06); color: #64748b; border: 1px dashed rgba(245,158,11,0.3); padding: 0.9rem 1.5rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.6rem; cursor: pointer; transition: all 0.2s; font-size: 0.88rem; }
+        .btn-locked-action:hover { background: rgba(245,158,11,0.1); color: #fbbf24; border-style: solid; }
+        .lock-plan-badge { background: rgba(245,158,11,0.15); color: #fbbf24; padding: 0.1rem 0.5rem; border-radius: 99px; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; }
+        .btn-locked-sm { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(245,158,11,0.08); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); padding: 0.4rem 0.85rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+        .amort-locked-block { display: flex; align-items: center; gap: 1rem; background: rgba(245,158,11,0.06); border: 1px dashed rgba(245,158,11,0.2); border-radius: 12px; padding: 1.25rem 1.5rem; cursor: pointer; transition: all 0.2s; color: #94a3b8; margin-top: 0.75rem; }
+        .amort-locked-block:hover { background: rgba(245,158,11,0.1); }
+        .amort-locked-block strong { display: block; color: #fbbf24; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .amort-locked-block p { font-size: 0.8rem; color: #64748b; margin: 0; line-height: 1.5; }
+        .btn-upgrade-sm { display: inline-flex; align-items: center; gap: 0.3rem; background: linear-gradient(135deg,#7c3aed,#a855f7); color: white; border: none; padding: 0.4rem 0.9rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+        .h-count-group { display: flex; align-items: center; gap: 0.6rem; }
+        .h-limit-badge { background: rgba(245,158,11,0.12); color: #fbbf24; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
+        .history-limit-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.5rem; background: rgba(245,158,11,0.06); border-top: 1px solid rgba(245,158,11,0.15); color: #64748b; font-size: 0.82rem; cursor: pointer; }
+        .history-limit-row:hover { background: rgba(245,158,11,0.1); }
+        .history-limit-row span { flex: 1; }
 
         /* Balance card */
         .balance-summary-card { padding: 2rem; }
