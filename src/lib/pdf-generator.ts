@@ -504,7 +504,9 @@ export const generatePaymentReceipt = (
         : calcDueDate(new Date(loan.startDate), loan.term, loan.termUnit);
     const dueDate = fmtDate(dueDateObj);
 
-    const receiptNo = seqNo("IN", payment.id);
+    const receiptNo = payment.receiptNumber != null
+        ? `R${String(payment.receiptNumber).padStart(8, "0")}`
+        : seqNo("R", payment.id);
     const loanNo    = seqNo("PR", loan.id);
 
     const methodMap: Record<string, string> = {

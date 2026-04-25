@@ -117,25 +117,39 @@ export function Navbar() {
 
               {userMenuOpen && (
                 <div className="user-dropdown">
+                  {/* User header */}
+                  <div className="dd-header">
+                    <div className="dd-avatar">
+                      <User size={17} />
+                    </div>
+                    <div className="dd-info">
+                      <p className="dd-name">{session.user?.name || "Admin"}</p>
+                      <p className="dd-role">{isSuperadmin ? "Super Admin" : "Administrador"}</p>
+                    </div>
+                  </div>
+
                   {!isSuperadmin && (
                     <>
-                      <Link href="/plans" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                        <Zap size={15} /> Mis Planes
+                      <div className="dd-section-label">Cuenta</div>
+                      <Link href="/plans" className="dd-item" onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-yellow"><Zap size={13} /></div>
+                        <span className="dd-item-text">Mis Planes</span>
                       </Link>
-                      <Link href="/subscription" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                        <ShieldCheck size={15} /> Suscripción
+                      <Link href="/subscription" className="dd-item" onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-green"><ShieldCheck size={13} /></div>
+                        <span className="dd-item-text">Suscripción</span>
                       </Link>
-                      <Link href="/settings" className="dropdown-item" onClick={() => setUserMenuOpen(false)}>
-                        <Settings size={15} /> Configuración
+                      <Link href="/settings" className="dd-item" onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-slate"><Settings size={13} /></div>
+                        <span className="dd-item-text">Configuración</span>
                       </Link>
-                      <div className="dropdown-divider" />
                     </>
                   )}
-                  <button
-                    className="dropdown-item dropdown-logout"
-                    onClick={() => signOut({ callbackUrl: "/login" })}
-                  >
-                    <LogOut size={15} /> Cerrar Sesión
+
+                  <div className="dd-sep" />
+                  <button className="dd-logout" onClick={() => signOut({ callbackUrl: "/login" })}>
+                    <div className="dd-icon dd-icon-red"><LogOut size={13} /></div>
+                    <span className="dd-item-text">Cerrar Sesión</span>
                   </button>
                 </div>
               )}
@@ -336,56 +350,136 @@ export function Navbar() {
           }
           .chevron.open { transform: rotate(180deg); }
 
-          /* Dropdown panel */
+          /* ── Dropdown panel ── */
           .user-dropdown {
             position: absolute;
-            top: calc(100% + 8px);
+            top: calc(100% + 10px);
             right: 0;
-            background: rgba(15, 23, 42, 0.98);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 12px;
-            padding: 0.5rem;
-            min-width: 180px;
-            box-shadow: 0 16px 40px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
+            width: 220px;
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 16px;
+            padding: 6px;
+            box-shadow: 0 24px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03);
             z-index: 100;
+            animation: dd-in 0.14s cubic-bezier(.22,.68,0,1.2);
           }
-          .dropdown-item {
+          @keyframes dd-in {
+            from { opacity:0; transform:translateY(-8px) scale(.96); }
+            to   { opacity:1; transform:translateY(0)    scale(1);   }
+          }
+
+          /* Header */
+          .dd-header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            margin-bottom: 4px;
+          }
+          .dd-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            background: linear-gradient(135deg,#6366f1,#a855f7);
             display: flex;
             align-items: center;
-            gap: 0.6rem;
-            padding: 0.6rem 0.75rem;
-            border-radius: 8px;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 14px rgba(99,102,241,0.4);
+            color: #fff;
+          }
+          .dd-info { display:flex; flex-direction:column; gap:1px; min-width:0; }
+          .dd-name {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .dd-role {
+            margin: 0;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #818cf8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+          }
+
+          /* Section label */
+          .dd-section-label {
+            font-size: 0.67rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 4px 10px 2px;
+          }
+
+          /* Items */
+          .dd-item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
             color: #94a3b8;
             text-decoration: none;
-            font-size: 0.875rem;
+            font-size: 0.855rem;
             font-weight: 500;
-            transition: all 0.15s;
+            transition: background 0.13s, color 0.13s;
+            cursor: pointer;
+            width: 100%;
+          }
+          .dd-item:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+          .dd-item-text { line-height:1; }
+
+          /* Icons */
+          .dd-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .dd-icon-yellow { background:rgba(250,204,21,.14); color:#fbbf24; }
+          .dd-icon-green  { background:rgba(34,197,94,.14);  color:#4ade80; }
+          .dd-icon-slate  { background:rgba(148,163,184,.1); color:#94a3b8; }
+          .dd-icon-red    { background:rgba(239,68,68,.14);  color:#f87171; }
+
+          /* Separator */
+          .dd-sep { height:1px; background:rgba(255,255,255,0.07); margin:4px 6px; }
+
+          /* Logout */
+          .dd-logout {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            color: #f87171;
+            font-size: 0.855rem;
+            font-weight: 500;
             background: transparent;
             border: none;
             cursor: pointer;
             width: 100%;
-            text-align: left;
+            transition: background 0.13s, color 0.13s;
           }
-          .dropdown-item:hover {
-            background: rgba(255,255,255,0.07);
-            color: #f8fafc;
-          }
-          .dropdown-divider {
-            height: 1px;
-            background: rgba(255,255,255,0.08);
-            margin: 0.25rem 0.5rem;
-          }
-          .dropdown-logout {
-            color: #f87171;
-          }
-          .dropdown-logout:hover {
-            background: rgba(244,63,94,0.1);
-            color: #f43f5e;
-          }
+          .dd-logout:hover { background:rgba(239,68,68,.1); color:#fca5a5; }
+
+          /* legacy aliases kept for mobile */
+          .dropdown-divider { height:1px; background:rgba(255,255,255,0.07); margin:4px 6px; }
+          .dropdown-item, .dropdown-logout { display:flex; flex-direction:row; align-items:center; }
+          .item-icon { display:flex; align-items:center; justify-content:center; }
 
           /* Mobile */
           .mobile-toggle {

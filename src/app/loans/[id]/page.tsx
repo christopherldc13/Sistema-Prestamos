@@ -133,10 +133,14 @@ export default function LoanDetailsPage() {
     }, [schedule, loan]);
 
     const daysUntilDue = useMemo(() => {
-        if (!loan?.dueDate) return null;
-        const diff = new Date(loan.dueDate).getTime() - Date.now();
-        return Math.ceil(diff / (1000 * 60 * 60 * 24));
-    }, [loan]);
+        const dateStr = nextInstallment?.dueDate ?? loan?.dueDate;
+        if (!dateStr) return null;
+        const [y, m, d] = dateStr.split("T")[0].split("-").map(Number);
+        const dueUTC = Date.UTC(y, m - 1, d);
+        const now = new Date();
+        const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        return Math.round((dueUTC - nowUTC) / (1000 * 60 * 60 * 24));
+    }, [nextInstallment, loan]);
 
     const fmtCurrency = (n: number) =>
         n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -501,7 +505,7 @@ export default function LoanDetailsPage() {
                                                 <td>
                                                     <div className="date-cell">
                                                         <Calendar size={14} className="dim" />
-                                                        {new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
+                                                        {new Date(p.date.split("T")[0] + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })}
                                                     </div>
                                                 </td>
                                                 <td><span className="amount-pigo">+${fmtCurrency(p.amount)}</span></td>
@@ -539,7 +543,7 @@ export default function LoanDetailsPage() {
                                         <div className="p-m-top">
                                             <div className="p-m-date">
                                                 <Calendar size={12} />
-                                                <span>{new Date(p.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
+                                                <span>{new Date(p.date.split("T")[0] + "T12:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</span>
                                             </div>
                                             <span className="method-tag">{p.method.toUpperCase()}</span>
                                         </div>
@@ -595,12 +599,26 @@ export default function LoanDetailsPage() {
                                 <button className="btn-close-modal" onClick={() => setIsPaymentModalOpen(false)}><X size={20} /></button>
                             </header>
 
-                            {loan.installmentAmount && (
-                                <div className="pmt-hint">
-                                    <CheckCircle2 size={14} />
-                                    <span>Cuota fija sugerida: <strong>${fmtCurrency(loan.installmentAmount)}</strong></span>
-                                </div>
-                            )}
+                            <div className="pmt-hints-row">
+                                {loan.installmentAmount && (
+                                    <button
+                                        type="button"
+                                        className="pmt-hint-btn"
+                                        onClick={() => setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount, loan.remainingBalance)) }))}
+                                    >
+                                        <span className="pmt-hint-label">Pagar cuota</span>
+                                        <span className="pmt-hint-value">${fmtCurrency(Math.min(loan.installmentAmount, loan.remainingBalance))}</span>
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className="pmt-hint-btn pmt-hint-total"
+                                    onClick={() => setPaymentForm(f => ({ ...f, amount: String(loan.remainingBalance) }))}
+                                >
+                                    <span className="pmt-hint-label">Saldar total</span>
+                                    <span className="pmt-hint-value">${fmtCurrency(loan.remainingBalance)}</span>
+                                </button>
+                            </div>
 
                             <form onSubmit={handlePayment} className="modal-form-pro">
                                 <div className="field-group-modal">
@@ -835,7 +853,15 @@ export default function LoanDetailsPage() {
         .modal-header-pro p { color: #64748b; font-size: 0.9rem; }
         .btn-close-modal { background: transparent; border: none; color: #475569; cursor: pointer; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .btn-close-modal:hover { background: rgba(255,255,255,0.05); color: white; }
-        .pmt-hint { display: flex; align-items: center; gap: 0.75rem; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.12); color: #10b981; padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1.5rem; }
+        .pmt-hints-row { display: flex; gap: 0.6rem; margin-bottom: 1.5rem; }
+        .pmt-hint-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; flex: 1; padding: 0.7rem 1rem; border-radius: 12px; border: 1.5px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.08); cursor: pointer; transition: all 0.15s; }
+        .pmt-hint-btn:hover { background: rgba(16,185,129,0.16); border-color: rgba(16,185,129,0.55); transform: translateY(-1px); }
+        .pmt-hint-btn:active { transform: translateY(0); }
+        .pmt-hint-label { font-size: 0.72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+        .pmt-hint-value { font-size: 1rem; font-weight: 800; color: #10b981; }
+        .pmt-hint-total { border-color: rgba(99,102,241,0.35); background: rgba(99,102,241,0.08); }
+        .pmt-hint-total:hover { background: rgba(99,102,241,0.16); border-color: rgba(99,102,241,0.55); }
+        .pmt-hint-total .pmt-hint-value { color: #818cf8; }
         .field-group-modal { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
         .field-group-modal label { font-size: 0.85rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
         .input-icon-box { position: relative; display: flex; align-items: center; }

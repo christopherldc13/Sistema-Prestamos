@@ -66,14 +66,15 @@ model Loan {
 }
 
 model Payment {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  amount      Float
-  date        DateTime @default(now())
-  method      String   // "cash", "transfer", etc.
-  loanId      String   @db.ObjectId
-  loan        Loan     @relation(fields: [loanId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  receiptNumber Int?
+  amount        Float
+  date          DateTime @default(now())
+  method        String   // "cash", "transfer", etc.
+  loanId        String   @db.ObjectId
+  loan          Loan     @relation(fields: [loanId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Settings {

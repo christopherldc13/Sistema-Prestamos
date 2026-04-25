@@ -44,6 +44,12 @@ export async function POST(req: NextRequest) {
             newStatus = loan.status === "overdue" ? "overdue" : "active";
         }
 
+        const lastPayment = await prisma.payment.findFirst({
+            orderBy: { receiptNumber: "desc" },
+            select: { receiptNumber: true },
+        });
+        const nextReceiptNumber = (lastPayment?.receiptNumber ?? 0) + 1;
+
         const [payment, updatedLoan] = await prisma.$transaction([
             prisma.payment.create({
                 data: {
@@ -51,6 +57,7 @@ export async function POST(req: NextRequest) {
                     amount: pAmount,
                     method,
                     date: new Date(date || Date.now()),
+                    receiptNumber: nextReceiptNumber,
                 },
             }),
             prisma.loan.update({
