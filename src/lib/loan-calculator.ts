@@ -1,13 +1,3 @@
-/**
- * Módulo de cálculo financiero para préstamos.
- *
- * Soporta:
- *  - Interés Simple con cuotas iguales
- *  - Amortización Francesa (cuota fija, interés compuesto) — Sistema PMT
- *  - Normalización de tasa de interés según frecuencia
- *  - Generación de tabla de amortización completa
- */
-
 export type TermUnit = "days" | "weeks" | "months";
 export type RateFrequency = "daily" | "monthly" | "annual";
 export type InterestType = "simple" | "compound";
@@ -35,27 +25,24 @@ export interface LoanCalculationResult {
     periodicRate: number;          // tasa periódica decimal (ej: 0.10 = 10%)
     totalInterest: number;
     totalToPay: number;
-    installmentAmount: number;     // cuota fija (PMT o cuota simple)
+    installmentAmount: number;     // cuota fija (número entero)
     dueDate: Date;
     schedule: AmortizationRow[];
 }
 
 /** Convierte la tasa ingresada a tasa por período según termUnit */
 export function getPeriodicRate(
-    rate: number,            // en porcentaje
+    rate: number,
     rateFrequency: RateFrequency,
     termUnit: TermUnit
 ): number {
     const r = rate / 100;
-
-    // Primero convertimos todo a tasa diaria, luego al período destino
     let dailyRate: number;
     switch (rateFrequency) {
         case "daily":   dailyRate = r; break;
         case "monthly": dailyRate = r / 30; break;
         case "annual":  dailyRate = r / 365; break;
     }
-
     switch (termUnit) {
         case "days":   return dailyRate;
         case "weeks":  return dailyRate * 7;
@@ -67,20 +54,13 @@ export function getPeriodicRate(
 export function calcDueDate(startDate: Date, term: number, termUnit: TermUnit): Date {
     const d = new Date(startDate);
     switch (termUnit) {
-        case "days":
-            d.setDate(d.getDate() + term);
-            break;
-        case "weeks":
-            d.setDate(d.getDate() + term * 7);
-            break;
-        case "months":
-            d.setMonth(d.getMonth() + term);
-            break;
+        case "days":   d.setDate(d.getDate() + term); break;
+        case "weeks":  d.setDate(d.getDate() + term * 7); break;
+        case "months": d.setMonth(d.getMonth() + term); break;
     }
     return d;
 }
 
-/** Suma una unidad de tiempo a una fecha (para generar fechas de cuotas) */
 function addPeriod(date: Date, termUnit: TermUnit): Date {
     const d = new Date(date);
     switch (termUnit) {
@@ -91,18 +71,22 @@ function addPeriod(date: Date, termUnit: TermUnit): Date {
     return d;
 }
 
-/**
- * Cuota fija (PMT) para amortización francesa:
- * PMT = P * r * (1+r)^n / ((1+r)^n - 1)
- * Si r = 0: PMT = P / n
- */
 function calcPMT(principal: number, periodicRate: number, n: number): number {
     if (periodicRate === 0) return principal / n;
     const factor = Math.pow(1 + periodicRate, n);
     return (principal * periodicRate * factor) / (factor - 1);
 }
 
-/** Genera la tabla de amortización completa */
+/** Redondea a 2 decimales (para cálculos intermedios) */
+function round2(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
+/** Redondea al múltiplo de 5 más cercano (ej: 8333 → 8335, 8332 → 8330) */
+function roundPeso(n: number): number {
+    return Math.round(n / 5) * 5;
+}
+
 export function calculateLoan(params: LoanParams): LoanCalculationResult {
     const { amount, annualOrPeriodicRate, rateFrequency, term, termUnit, interestType, startDate } = params;
     const r = getPeriodicRate(annualOrPeriodicRate, rateFrequency, termUnit);
@@ -110,31 +94,52 @@ export function calculateLoan(params: LoanParams): LoanCalculationResult {
     const schedule: AmortizationRow[] = [];
 
     if (interestType === "simple") {
-        // Interés simple: I = P × r × n
-        // Cada cuota lleva la misma proporción de capital e interés
-        const totalInterest = amount * r * term;
-        const totalToPay = amount + totalInterest;
-        const installmentAmount = round2(totalToPay / term);
+        const totalInterest = round2(amount * r * term);
+        const totalToPay = round2(amount + totalInterest);
 
-        // Recalc last installment to absorb rounding
-        let balance = totalToPay;
+        // Cuota regular redondeada al peso entero
+        const regularInstallment = roundPeso(totalToPay / term);
+        // Interés regular por período redondeado al peso entero
+        const regularInterest = roundPeso(totalInterest / term);
+        // Capital regular = cuota - interés
+        const regularPrincipal = regularInstallment - regularInterest;
+
+        // Rastrear exactos para la última cuota
+        let paidTotal = 0;
+        let paidInterest = 0;
+        let paidPrincipal = 0;
         let currentDate = new Date(startDate);
 
         for (let i = 1; i <= term; i++) {
             currentDate = addPeriod(currentDate, termUnit);
             const isLast = i === term;
-            const interestPayment = round2((totalInterest / term));
-            const principalPayment = round2(amount / term);
-            const payment = isLast ? round2(balance) : installmentAmount;
-            balance = round2(balance - payment);
+
+            let interestPayment: number;
+            let totalPayment: number;
+            let principalPayment: number;
+
+            if (isLast) {
+                // Última cuota: absorbe cualquier diferencia por redondeo
+                totalPayment = roundPeso(totalToPay) - paidTotal;
+                interestPayment = roundPeso(totalInterest) - paidInterest;
+                principalPayment = roundPeso(amount) - paidPrincipal;
+            } else {
+                interestPayment = regularInterest;
+                principalPayment = regularPrincipal;
+                totalPayment = regularInstallment;
+            }
+
+            paidTotal += totalPayment;
+            paidInterest += interestPayment;
+            paidPrincipal += principalPayment;
 
             schedule.push({
                 installmentNumber: i,
                 dueDate: currentDate.toISOString().split("T")[0],
-                principalPayment: isLast ? round2(amount / term + (payment - installmentAmount)) : principalPayment,
+                principalPayment,
                 interestPayment,
-                totalPayment: payment,
-                balance: Math.max(0, balance),
+                totalPayment,
+                balance: Math.max(0, roundPeso(amount) - paidPrincipal),
             });
         }
 
@@ -142,29 +147,37 @@ export function calculateLoan(params: LoanParams): LoanCalculationResult {
             periodicRate: r,
             totalInterest: round2(totalInterest),
             totalToPay: round2(totalToPay),
-            installmentAmount: round2(installmentAmount),
+            installmentAmount: regularInstallment,
             dueDate,
             schedule,
         };
 
     } else {
-        // Interés compuesto — Amortización Francesa (cuota fija PMT)
-        const installmentAmount = round2(calcPMT(amount, r, term));
+        // Amortización Francesa — cuota fija PMT redondeada al peso entero
+        const rawPMT = calcPMT(amount, r, term);
+        const regularInstallment = roundPeso(rawPMT);
         let balance = amount;
         let currentDate = new Date(startDate);
 
         for (let i = 1; i <= term; i++) {
             currentDate = addPeriod(currentDate, termUnit);
-            const interestPayment = round2(balance * r);
-            let principalPayment = round2(installmentAmount - interestPayment);
+            const isLast = i === term;
 
-            // Última cuota: saldar el saldo exacto
-            if (i === term) {
-                principalPayment = round2(balance);
+            const interestPayment = roundPeso(balance * r);
+
+            let principalPayment: number;
+            let totalPayment: number;
+
+            if (isLast) {
+                // Última cuota: salda el saldo exacto
+                principalPayment = roundPeso(balance);
+                totalPayment = principalPayment + interestPayment;
+            } else {
+                principalPayment = roundPeso(regularInstallment - interestPayment);
+                totalPayment = regularInstallment;
             }
 
-            const totalPayment = round2(principalPayment + interestPayment);
-            balance = round2(Math.max(0, balance - principalPayment));
+            balance = Math.max(0, roundPeso(balance - principalPayment));
 
             schedule.push({
                 installmentNumber: i,
@@ -182,18 +195,13 @@ export function calculateLoan(params: LoanParams): LoanCalculationResult {
             periodicRate: r,
             totalInterest: round2(totalToPay - amount),
             totalToPay: round2(totalToPay),
-            installmentAmount,
+            installmentAmount: regularInstallment,
             dueDate,
             schedule,
         };
     }
 }
 
-function round2(n: number): number {
-    return Math.round(n * 100) / 100;
-}
-
-/** Verifica si un préstamo está vencido según su fecha de vencimiento */
 export function isOverdue(dueDate: Date | string | null, status: string): boolean {
     if (status === "paid") return false;
     if (!dueDate) return false;

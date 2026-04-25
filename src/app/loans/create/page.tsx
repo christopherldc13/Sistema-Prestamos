@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import {
-    CreditCard, Calendar, Percent, Clock, User, ChevronLeft,
+    Calendar, Percent, Clock, User, ChevronLeft,
     Info, DollarSign, CheckCircle2, Calculator, TrendingUp,
-    Wallet, AlertCircle, Table2, Lock, Zap
+    Wallet, AlertCircle, Table2, Lock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -105,6 +105,9 @@ export default function CreateLoanPage() {
 
     const fmtCurrency = (n: number) =>
         n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const fmtInt = (n: number) =>
+        Math.round(n).toLocaleString("es-DO");
 
     const rateLabel = `% ${RATE_FREQ_LABELS[formData.rateFrequency]}`;
     const periodLabel = TERM_UNIT_LABELS[formData.termUnit];
@@ -327,7 +330,7 @@ export default function CreateLoanPage() {
                                     <div className="suggest-header">Cuota Fija ({formData.interestType === "compound" ? "PMT" : "Simple"})</div>
                                     <div className="suggest-val">
                                         <span className="cur">$</span>
-                                        {fmtCurrency(calc.installmentAmount)}
+                                        {fmtInt(calc.installmentAmount)}
                                         <span className="per"> / {periodLabel}</span>
                                     </div>
                                 </div>
@@ -388,10 +391,10 @@ export default function CreateLoanPage() {
                                                         <tr key={row.installmentNumber}>
                                                             <td>{row.installmentNumber}</td>
                                                             <td>{new Date(row.dueDate + "T12:00:00").toLocaleDateString("es-DO", { day: "2-digit", month: "short", year: "2-digit" })}</td>
-                                                            <td className="num">${fmtCurrency(row.principalPayment)}</td>
-                                                            <td className="num interest">${fmtCurrency(row.interestPayment)}</td>
-                                                            <td className="num total">${fmtCurrency(row.totalPayment)}</td>
-                                                            <td className="num bal">${fmtCurrency(row.balance)}</td>
+                                                            <td className="num">${fmtInt(row.principalPayment)}</td>
+                                                            <td className="num interest">${fmtInt(row.interestPayment)}</td>
+                                                            <td className="num total">${fmtInt(row.totalPayment)}</td>
+                                                            <td className="num bal">${fmtInt(row.balance)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
