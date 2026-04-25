@@ -567,14 +567,59 @@ export default function Home() {
           .quick-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 640px) {
-          .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-          .dashboard-header { flex-direction: column; align-items: flex-start; gap: 0.85rem; padding-bottom: 1.25rem; }
+          .home-wrapper { gap: 1.1rem; }
+
+          /* Header */
+          .dashboard-header {
+            flex-direction: column; align-items: flex-start;
+            gap: 0.75rem; padding-bottom: 1rem;
+          }
           .header-right { align-items: flex-start; }
-          .welcome-text { font-size: 1.75rem; }
-          .metrics-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding: 1rem 1.25rem; }
+          .welcome-text { font-size: 1.65rem; }
+          .welcome-sub { font-size: 0.8rem; }
+
+          /* KPI cards: 2 columnas compactas */
+          .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+          .stat-card { padding: 1.1rem 1rem 1rem; border-radius: 14px; }
+          .stat-label { font-size: 0.62rem; letter-spacing: 0.06em; }
+          .stat-val { font-size: 1.5rem; margin-bottom: 0.4rem; }
+          .stat-val-skeleton { height: 1.5rem; }
+          .stat-icon { width: 30px; height: 30px; border-radius: 8px; }
+          .stat-head { margin-bottom: 0.75rem; }
+          .stat-sub { font-size: 0.7rem; }
+
+          /* Metrics bar: 2x2 grid */
+          .metrics-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            padding: 0.9rem 1rem;
+          }
           .metric-sep { display: none; }
-          .metric-item { justify-content: flex-start; }
-          .quick-grid { grid-template-columns: 1fr; }
+          .metric-item { justify-content: flex-start; gap: 0.4rem; }
+          .metric-label { font-size: 0.74rem; }
+          .metric-value { font-size: 0.84rem; }
+
+          /* Feed cards */
+          .feed-card { padding: 1.1rem; }
+          .feed-header { margin-bottom: 1rem; }
+          .feed-title { font-size: 0.84rem; }
+          .feed-item { padding: 0.6rem 0.7rem; gap: 0.65rem; }
+          .feed-name { font-size: 0.8rem; }
+          .feed-amount { font-size: 0.82rem; }
+
+          /* Quick actions: 1 columna */
+          .quick-grid { grid-template-columns: 1fr; gap: 0.6rem; }
+          .quick-item { padding: 0.85rem 1rem; gap: 0.75rem; }
+          .quick-icon { width: 32px; height: 32px; border-radius: 8px; }
+          .quick-title { font-size: 0.8rem; }
+          .quick-desc { font-size: 0.68rem; }
+        }
+
+        @media (max-width: 380px) {
+          .stats-grid { grid-template-columns: 1fr; }
+          .stat-val { font-size: 1.75rem; }
+          .metrics-bar { grid-template-columns: 1fr; }
         }
       `}} />
     </div>
