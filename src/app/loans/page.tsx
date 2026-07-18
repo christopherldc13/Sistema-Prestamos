@@ -93,7 +93,8 @@ export default function LoansPage() {
                             <span>Consultando registros...</span>
                         </div>
                     ) : filteredLoans.length > 0 ? (
-                        <div className="table-responsive glass-card">
+                        <>
+                        <div className="table-responsive glass-card desktop-only-table">
                             <table className="pro-table">
                                 <thead>
                                     <tr>
@@ -171,6 +172,63 @@ export default function LoansPage() {
                                 </tbody>
                             </table>
                         </div>
+
+                        <div className="mobile-only-cards">
+                            {filteredLoans.map((loan: any) => {
+                                const pendingTotal = (loan.remainingBalance || 0) + (loan.accumulatedLateFee || 0);
+                                const progress = ((loan.totalToPay - loan.remainingBalance) / loan.totalToPay) * 100;
+                                return (
+                                    <Link key={loan.id} href={`/loans/${loan.id}`} className="loan-mobile-card glass-card">
+                                        <div className="lmc-top">
+                                            <div className="mini-avatar">
+                                                <User size={14} />
+                                            </div>
+                                            <div className="client-meta">
+                                                <span className="name">{loan.client.fullName}</span>
+                                                <span className="id-sub">#{loan.id.slice(-6).toUpperCase()}</span>
+                                            </div>
+                                            <span className={`status-pill ${loan.status}`}>
+                                                {loan.status === 'active' && <Clock size={12} />}
+                                                {loan.status === 'paid' && <CheckCircle2 size={12} />}
+                                                {loan.status === 'overdue' && <AlertCircle size={12} />}
+                                                {loan.status === 'active' ? 'Activo' :
+                                                 loan.status === 'paid' ? 'Pagado' :
+                                                 loan.status === 'overdue' ? 'Vencido' : loan.status}
+                                            </span>
+                                        </div>
+
+                                        <div className="lmc-amounts">
+                                            <div className="lmc-amt-col">
+                                                <span className="lmc-label">Monto Total</span>
+                                                <span className="lmc-value">${loan.totalToPay.toLocaleString()}</span>
+                                            </div>
+                                            <div className="lmc-amt-col lmc-amt-right">
+                                                <span className="lmc-label">Saldo Pendiente</span>
+                                                <span className={`lmc-value ${loan.remainingBalance > 0 ? 'highlight' : ''}`}>
+                                                    ${pendingTotal.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                                {loan.accumulatedLateFee > 0 && (
+                                                    <span className="lmc-mora">+ ${loan.accumulatedLateFee.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mora</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mini-progress">
+                                            <div className="progress-fill" style={{ width: `${progress}%` }}></div>
+                                        </div>
+
+                                        <div className="lmc-bottom">
+                                            <div className="term-cell">
+                                                <Calendar size={13} />
+                                                <span>{loan.term} {loan.termUnit === 'months' ? 'Meses' : loan.termUnit === 'biweekly' ? 'Qnas' : loan.termUnit === 'weeks' ? 'Sems' : 'Días'}</span>
+                                            </div>
+                                            <span className="lmc-go">Gestionar <ChevronRight size={14} /></span>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                        </>
                     ) : (
                         <div className="state-msg">
                             <div className="empty-box">
@@ -256,6 +314,27 @@ export default function LoansPage() {
 
         .empty-box { width: 64px; height: 64px; border-radius: 20px; background: rgba(255,255,255,0.02); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
 
+        /* Mobile card view */
+        .mobile-only-cards { display: none; }
+        .loan-mobile-card {
+          display: flex; flex-direction: column; gap: 0.9rem; padding: 1.1rem 1.15rem;
+          text-decoration: none; transition: border-color 0.2s, transform 0.15s;
+        }
+        .loan-mobile-card:active { transform: scale(0.98); }
+        .loan-mobile-card:hover { border-color: rgba(99,102,241,0.35); }
+        .lmc-top { display: flex; align-items: center; gap: 0.75rem; }
+        .lmc-top .client-meta { flex: 1; min-width: 0; }
+        .lmc-top .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .lmc-amounts { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .lmc-amt-col { display: flex; flex-direction: column; gap: 0.2rem; }
+        .lmc-amt-right { align-items: flex-end; text-align: right; }
+        .lmc-label { font-size: 0.68rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
+        .lmc-value { font-size: 1rem; font-weight: 800; color: #cbd5e1; }
+        .lmc-value.highlight { color: #f59e0b; }
+        .lmc-mora { font-size: 0.68rem; color: #f43f5e; font-weight: 700; }
+        .lmc-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); }
+        .lmc-go { display: flex; align-items: center; gap: 0.3rem; color: #6366f1; font-size: 0.85rem; font-weight: 700; }
+
         @media (max-width: 1024px) {
           .loans-header { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
           .tools-section { flex-direction: column; align-items: stretch; gap: 1rem; }
@@ -267,6 +346,9 @@ export default function LoansPage() {
           .btn-add-loan-pro { width: 100%; justify-content: center; }
           .filter-pro { width: 100%; }
           .select-pro { width: 100%; background: rgba(15,23,42,0.8); padding: 0.75rem; border-radius: 8px; }
+
+          .desktop-only-table { display: none; }
+          .mobile-only-cards { display: flex; flex-direction: column; gap: 0.9rem; }
         }
       `}} />
         </div>

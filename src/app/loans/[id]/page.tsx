@@ -7,12 +7,12 @@ import {
     PlusCircle, History, AlertCircle, CheckCircle2,
     DollarSign, FileText, X, Clock, Wallet,
     Table2, TrendingDown, TrendingUp, ChevronRight, BookOpen,
-    Copy, Check, Building2, ShieldAlert
+    Copy, Check, Building2, ShieldAlert, Eye
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { generateLoanReceipt, generatePaymentReceipt, generateAccountStatement, CompanyConfig } from "@/lib/pdf-generator";
+import { generateLoanReceipt, generatePaymentReceipt, generateAccountStatement, getPaymentReceiptDetails, CompanyConfig } from "@/lib/pdf-generator";
 import { getPlan, type PlanFeatures } from "@/lib/plans";
 import { Lock, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,7 @@ export default function LoanDetailsPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
     const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
+    const [viewingPayment, setViewingPayment] = useState<any>(null);
 
     const [paymentForm, setPaymentForm] = useState({
         amount: "",
@@ -552,9 +553,14 @@ export default function LoanDetailsPage() {
                                                 <td><span className="amount-pigo">+${fmtCurrency(p.amount)}</span></td>
                                                 <td><span className="method-tag">{p.method.toUpperCase()}</span></td>
                                                 <td className="text-right">
-                                                    <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
-                                                        <Download size={14} /><span>Recibo</span>
-                                                    </button>
+                                                    <div className="receipt-actions">
+                                                        <button className="btn-mini-view" onClick={() => setViewingPayment(p)}>
+                                                            <Eye size={14} /><span>Ver</span>
+                                                        </button>
+                                                        <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
+                                                            <Download size={14} /><span>Recibo</span>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -590,9 +596,14 @@ export default function LoanDetailsPage() {
                                         </div>
                                         <div className="p-m-main">
                                             <span className="amount-pigo">+${fmtCurrency(p.amount)}</span>
-                                            <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
-                                                <Download size={14} /><span>Recibo</span>
-                                            </button>
+                                            <div className="receipt-actions">
+                                                <button className="btn-mini-view" onClick={() => setViewingPayment(p)}>
+                                                    <Eye size={14} /><span>Ver</span>
+                                                </button>
+                                                <button className="btn-mini-download" onClick={() => generatePaymentReceipt(p, loan, session?.user?.name || "Administrador", companyConfig)}>
+                                                    <Download size={14} /><span>Recibo</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))
@@ -797,6 +808,108 @@ export default function LoanDetailsPage() {
                 )}
             </AnimatePresence>
 
+            {/* Modal: Ver Detalles del Recibo */}
+            <AnimatePresence>
+                {viewingPayment && (() => {
+                    const d = getPaymentReceiptDetails(viewingPayment, loan);
+                    return (
+                        <div className="modal-root">
+                            <motion.div
+                                initial={{ backdropFilter: "blur(0px)", backgroundColor: "rgba(0,0,0,0)" }}
+                                animate={{ backdropFilter: "blur(4px)", backgroundColor: "rgba(0,0,0,0.7)" }}
+                                exit={{ backdropFilter: "blur(0px)", backgroundColor: "rgba(0,0,0,0)" }}
+                                className="modal-overlay-new"
+                                onClick={() => setViewingPayment(null)}
+                            />
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                                className="glass-card modal-content-premium view-receipt-modal"
+                            >
+                                <header className="modal-header-pro">
+                                    <div>
+                                        <h3>Detalle del Recibo</h3>
+                                        <p>{d.receiptNo} · Cuota {d.installmentNumber} de {d.totalInstallments}</p>
+                                    </div>
+                                    <button className="btn-close-modal" onClick={() => setViewingPayment(null)}><X size={20} /></button>
+                                </header>
+
+                                <div className="vr-breakdown">
+                                    <div className="vr-row">
+                                        <span><Wallet size={14} /> Capital amortizado</span>
+                                        <strong>${fmtCurrency(d.capitalPart)}</strong>
+                                    </div>
+                                    <div className="vr-row">
+                                        <span><TrendingDown size={14} /> Interés del período</span>
+                                        <strong>${fmtCurrency(d.interestPart)}</strong>
+                                    </div>
+                                    <div className="vr-row">
+                                        <span><ShieldAlert size={14} /> Mora</span>
+                                        <strong className={d.lateFeePart > 0 ? "vr-mora" : ""}>${fmtCurrency(d.lateFeePart)}</strong>
+                                    </div>
+                                </div>
+
+                                <div className="vr-total-row">
+                                    <span>Total Recibido</span>
+                                    <span className="vr-total-value">${fmtCurrency(d.totalReceived)}</span>
+                                </div>
+                                <div className="vr-meta-row">
+                                    <span>Forma de pago</span>
+                                    <span className="method-tag">{d.methodLabel.toUpperCase()}</span>
+                                </div>
+
+                                <div className="vr-divider" />
+
+                                <h4 className="vr-section-title">Resumen de Cuenta</h4>
+                                <div className="vr-breakdown">
+                                    <div className="vr-row">
+                                        <span>Saldo anterior</span>
+                                        <strong>${fmtCurrency(d.prevBalance)}</strong>
+                                    </div>
+                                    <div className="vr-row">
+                                        <span>Abonado a capital</span>
+                                        <strong>- ${fmtCurrency(d.principalPortion)}</strong>
+                                    </div>
+                                    {d.lateFeePart > 0 && (
+                                        <div className="vr-row">
+                                            <span>Mora cobrada (no amortiza)</span>
+                                            <strong className="vr-mora">${fmtCurrency(d.lateFeePart)}</strong>
+                                        </div>
+                                    )}
+                                    <div className="vr-row vr-row-final">
+                                        <span>Saldo pendiente</span>
+                                        <strong className={d.afterBalance === 0 ? "vr-paid" : ""}>${fmtCurrency(d.afterBalance)}</strong>
+                                    </div>
+                                </div>
+
+                                {d.afterBalance === 0 && (
+                                    <div className="vr-paid-banner"><CheckCircle2 size={15} /> Préstamo pagado — gracias</div>
+                                )}
+
+                                {d.nextInstallment && d.afterBalance > 0 && (
+                                    <div className="vr-next-installment">
+                                        <span>Próxima cuota</span>
+                                        <span>{new Date(d.nextInstallment.dueDate + "T12:00:00").toLocaleDateString("es-DO", { day: "2-digit", month: "short" })} · ${fmtCurrency(d.nextInstallment.totalPayment)}</span>
+                                    </div>
+                                )}
+
+                                <footer className="modal-footer-pro">
+                                    <button type="button" className="btn-cancel-pro" onClick={() => setViewingPayment(null)}>Cerrar</button>
+                                    <button
+                                        type="button"
+                                        className="btn-confirm-pro"
+                                        onClick={() => generatePaymentReceipt(viewingPayment, loan, session?.user?.name || "Administrador", companyConfig)}
+                                    >
+                                        <Download size={16} /> Descargar Recibo
+                                    </button>
+                                </footer>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
+            </AnimatePresence>
+
             <style dangerouslySetInnerHTML={{
                 __html: `
         .loan-profile-wrapper { width: 100%; max-width: 1400px; margin: 0 auto; padding-bottom: 5rem; }
@@ -911,8 +1024,29 @@ export default function LoanDetailsPage() {
         .amount-pigo { font-weight: 800; color: #10b981; font-size: 1rem; }
         .method-tag { font-size: 0.7rem; font-weight: 900; color: #475569; border: 1px solid rgba(255,255,255,0.05); padding: 0.25rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.02); }
         .text-right { text-align: right; }
+        .receipt-actions { display: inline-flex; gap: 0.5rem; }
         .btn-mini-download { background: transparent; border: 1px solid rgba(99,102,241,0.2); color: #818cf8; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s; }
         .btn-mini-download:hover { background: rgba(99,102,241,0.1); border-color: #6366f1; color: white; }
+        .btn-mini-view { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s; }
+        .btn-mini-view:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18); color: white; }
+
+        /* Ver Detalles del Recibo */
+        .view-receipt-modal { max-width: 420px; }
+        .vr-breakdown { display: flex; flex-direction: column; gap: 0.75rem; margin: 1.25rem 0; }
+        .vr-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #94a3b8; }
+        .vr-row span { display: flex; align-items: center; gap: 0.5rem; }
+        .vr-row strong { color: #e2e8f0; font-weight: 700; }
+        .vr-row.vr-row-final { padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.07); font-size: 0.92rem; }
+        .vr-row.vr-row-final strong { font-size: 1.1rem; }
+        .vr-mora { color: #f43f5e !important; }
+        .vr-paid { color: #10b981 !important; }
+        .vr-total-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.1rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.18); border-radius: 12px; font-weight: 700; color: #cbd5e1; }
+        .vr-total-value { font-size: 1.4rem; font-weight: 900; color: #818cf8; }
+        .vr-meta-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.85rem; font-size: 0.82rem; color: #64748b; }
+        .vr-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 1.5rem 0 1.1rem; }
+        .vr-section-title { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+        .vr-paid-banner { display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; padding: 0.7rem; margin-top: 1rem; font-weight: 700; font-size: 0.85rem; }
+        .vr-next-installment { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.08); font-size: 0.8rem; color: #64748b; font-weight: 600; }
         .empty-state-table { padding: 5rem 0 !important; text-align: center; }
         .empty-icon-box { margin: 0 auto 1.5rem; width: 64px; height: 64px; border-radius: 20px; background: rgba(255,255,255,0.02); display: flex; align-items: center; justify-content: center; color: #1e293b; }
         .empty-state-table p { color: #475569; font-weight: 600; }

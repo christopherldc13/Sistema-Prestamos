@@ -427,13 +427,26 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
 // ============================================================
 //  2. PAYMENT RECEIPT — Ticket Térmico 80 mm
 // ============================================================
-export const generatePaymentReceipt = (
-    payment: any,
-    loan: any,
-    processedBy = "ADMIN",
-    config: CompanyConfig = DEFAULT_COMPANY
-) => {
-    // ── Derive installment info from schedule ─────────────────
+export interface PaymentReceiptDetails {
+    receiptNo: string;
+    loanNo: string;
+    receiptDate: string;
+    dueDate: string;
+    installmentNumber: number;
+    totalInstallments: number;
+    capitalPart: number;
+    interestPart: number;
+    lateFeePart: number;
+    principalPortion: number;
+    totalReceived: number;
+    methodLabel: string;
+    prevBalance: number;
+    afterBalance: number;
+    nextInstallment: { dueDate: string; totalPayment: number } | null;
+}
+
+/** Calcula el desglose de un pago (capital, interés, mora, saldos) — fuente única usada tanto por el PDF como por la vista "Ver" en pantalla */
+export const getPaymentReceiptDetails = (payment: any, loan: any): PaymentReceiptDetails => {
     const schedule: any[] = Array.isArray(loan.paymentSchedule) ? loan.paymentSchedule : [];
 
     // La mora cobrada no amortiza capital, así que se excluye de todo cálculo de saldo/cuota
@@ -523,6 +536,30 @@ export const generatePaymentReceipt = (
         card: "Tarjeta",
     };
     const methodLabel = methodMap[payment.method] ?? payment.method.toUpperCase();
+
+    return {
+        receiptNo, loanNo, receiptDate, dueDate,
+        installmentNumber, totalInstallments,
+        capitalPart, interestPart, lateFeePart, principalPortion,
+        totalReceived: payment.amount,
+        methodLabel,
+        prevBalance, afterBalance,
+        nextInstallment: nextInstallment ? { dueDate: nextInstallment.dueDate, totalPayment: nextInstallment.totalPayment } : null,
+    };
+};
+
+export const generatePaymentReceipt = (
+    payment: any,
+    loan: any,
+    processedBy = "ADMIN",
+    config: CompanyConfig = DEFAULT_COMPANY
+) => {
+    const {
+        receiptNo, loanNo, receiptDate, dueDate,
+        installmentNumber, totalInstallments,
+        capitalPart, interestPart, lateFeePart, principalPortion,
+        methodLabel, prevBalance, afterBalance, nextInstallment,
+    } = getPaymentReceiptDetails(payment, loan);
 
     // ── Estimate height ───────────────────────────────────────
     let estimatedH = 195;
