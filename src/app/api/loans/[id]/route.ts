@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { isOverdue } from "@/lib/loan-calculator";
+import { getOverdueInfo } from "@/lib/loan-calculator";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -30,11 +30,24 @@ export async function GET(
             return NextResponse.json({ error: "Préstamo no encontrado o inaccesible" }, { status: 404 });
         }
 
-        // Auto-actualizar status a overdue si la fecha de vencimiento ya pasó
         const loanAny = loan as any;
-        if (loan.status === "active" && isOverdue(loanAny.dueDate, loan.status)) {
-            await prisma.loan.update({ where: { id: loan.id }, data: { status: "overdue" } });
-            loanAny.status = "overdue";
+        loanAny.daysOverdue = 0;
+        loanAny.accumulatedLateFee = 0;
+
+        if (loan.status !== "paid") {
+            const settings = await prisma.settings.findUnique({ where: { userId } });
+            const lateFeeRules = (settings?.value as any)?.lateFeeRules || [];
+            const schedule = (loan.paymentSchedule as any[]) || [];
+            const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
+            const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
+
+            if (loan.status !== newStatus) {
+                await prisma.loan.update({ where: { id: loan.id }, data: { status: newStatus } });
+                loanAny.status = newStatus;
+            }
+
+            loanAny.daysOverdue = overdueInfo.daysOverdue;
+            loanAny.accumulatedLateFee = overdueInfo.isOverdue ? overdueInfo.lateFee : 0;
         }
 
         return NextResponse.json(loan);

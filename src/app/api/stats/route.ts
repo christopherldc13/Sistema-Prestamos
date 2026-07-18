@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { isOverdue } from "@/lib/loan-calculator";
+import { getOverdueInfo } from "@/lib/loan-calculator";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -18,13 +18,30 @@ export async function GET() {
             include: { payments: true, client: { select: { fullName: true } } },
         });
 
+        const settings = await prisma.settings.findUnique({ where: { userId } });
+        const lateFeeRules = (settings?.value as any)?.lateFeeRules || [];
+
         const overdueUpdates: Promise<any>[] = [];
+        let totalAccumulatedLateFees = 0;
+
         for (const loan of loans) {
-            if (loan.status === "active" && isOverdue((loan as any).dueDate, loan.status)) {
+            (loan as any).accumulatedLateFee = 0;
+            if (loan.status === "paid") continue;
+
+            const schedule = (loan as any).paymentSchedule || [];
+            const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
+            const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
+
+            if (loan.status !== newStatus) {
                 overdueUpdates.push(
-                    prisma.loan.update({ where: { id: loan.id }, data: { status: "overdue" } })
+                    prisma.loan.update({ where: { id: loan.id }, data: { status: newStatus } })
                 );
-                (loan as any).status = "overdue";
+                (loan as any).status = newStatus;
+            }
+
+            if (overdueInfo.isOverdue) {
+                (loan as any).accumulatedLateFee = overdueInfo.lateFee;
+                totalAccumulatedLateFees += overdueInfo.lateFee;
             }
         }
         if (overdueUpdates.length > 0) await Promise.all(overdueUpdates);
@@ -32,6 +49,10 @@ export async function GET() {
         const totalLent      = loans.reduce((acc, l) => acc + l.amount, 0);
         const totalToPay     = loans.reduce((acc, l) => acc + l.totalToPay, 0);
         const totalCollected = loans.reduce((acc, l) => acc + l.payments.reduce((s, p) => s + p.amount, 0), 0);
+        // Mora ya cobrada históricamente en TODOS los préstamos (pagada, no solo la pendiente actual)
+        const totalMoraCollected = loans.reduce((acc, l) => acc + l.payments.reduce((s, p) => s + ((p as any).lateFeeAmount || 0), 0), 0);
+        // Saldo pendiente real = suma del saldo de cada préstamo (ya excluye mora) + mora actualmente sin cobrar
+        const totalRemainingBalance = loans.reduce((acc, l) => acc + l.remainingBalance, 0);
 
         const activeLoans  = loans.filter(l => l.status === "active").length;
         const paidLoans    = loans.filter(l => l.status === "paid").length;
@@ -58,18 +79,21 @@ export async function GET() {
                 id: l.id,
                 clientName: (l as any).client?.fullName || "Cliente",
                 amount: l.amount,
-                remainingBalance: l.remainingBalance,
+                remainingBalance: l.remainingBalance + (l as any).accumulatedLateFee,
+                accumulatedLateFee: (l as any).accumulatedLateFee,
                 dueDate: l.dueDate,
             }));
 
         return NextResponse.json({
             totalLent,
             totalCollected,
-            totalEarnings: totalToPay - totalLent,
+            totalEarnings: (totalToPay - totalLent) + totalMoraCollected,
+            totalMoraCollected,
             activeLoans,
             paidLoans,
             overdueLoans,
-            pendingBalance: totalToPay - totalCollected,
+            pendingBalance: totalRemainingBalance + totalAccumulatedLateFees,
+            totalAccumulatedLateFees,
             recentLoans,
             overdueList,
         });

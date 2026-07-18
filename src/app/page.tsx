@@ -43,7 +43,7 @@ const item = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, trans
 export default function Home() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<any>({
-    totalLent: 0, totalCollected: 0, totalEarnings: 0,
+    totalLent: 0, totalCollected: 0, totalEarnings: 0, totalMoraCollected: 0,
     activeLoans: 0, paidLoans: 0, overdueLoans: 0, pendingBalance: 0,
     recentLoans: [], overdueList: [],
   });
@@ -94,18 +94,20 @@ export default function Home() {
             value: stats.activeLoans.toString(),
             suffix: "",
             icon: <HeartHandshake size={18} />,
-            sub: stats.overdueLoans > 0 ? `${stats.overdueLoans} con retraso` : "Al corriente",
-            subOk: stats.overdueLoans === 0,
+            sub: stats.overdueLoans > 0
+              ? `${stats.overdueLoans} con retraso`
+              : stats.activeLoans > 0 ? "Al corriente" : "Sin préstamos activos",
+            subOk: stats.overdueLoans > 0 ? false : (stats.activeLoans > 0 ? true : null),
             color: "#6366f1",
             gradient: "linear-gradient(135deg,#6366f1,#4f46e5)",
           },
           {
-            title: "Cartera Total",
+            title: "Capital Prestado",
             value: fmtMoney(stats.totalLent),
             suffix: "",
             icon: <DollarSign size={18} />,
             sub: `Pendiente: ${fmtMoney(stats.pendingBalance)}`,
-            subOk: null,
+            subOk: stats.pendingBalance > 0 ? false : true,
             color: "#a855f7",
             gradient: "linear-gradient(135deg,#a855f7,#7e22ce)",
           },
@@ -124,7 +126,7 @@ export default function Home() {
             value: fmtMoney(stats.totalEarnings),
             suffix: "",
             icon: <Wallet size={18} />,
-            sub: "Intereses generados",
+            sub: stats.totalMoraCollected > 0 ? "Interés + Mora" : "Intereses generados",
             subOk: true,
             color: "#f59e0b",
             gradient: "linear-gradient(135deg,#f59e0b,#d97706)",
@@ -213,7 +215,11 @@ export default function Home() {
                   </div>
                   <div className="feed-right">
                     <span className="feed-amount" style={{ color: "#fbbf24" }}>{fmtMoney(l.remainingBalance)}</span>
-                    <span className="feed-time">pendiente</span>
+                    {l.accumulatedLateFee > 0 ? (
+                        <span className="feed-time" style={{ color: "#f43f5e", fontWeight: "bold" }}>+ mora</span>
+                    ) : (
+                        <span className="feed-time">pendiente</span>
+                    )}
                   </div>
                 </Link>
               ))}

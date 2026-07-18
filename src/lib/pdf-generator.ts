@@ -95,7 +95,8 @@ const seqNo = (prefix: string, id: string) => {
 /** Translate termUnit to Spanish */
 const termUnitLabel = (u: string, n: number) => {
     if (u === "months") return n === 1 ? "Mes" : "Meses";
-    if (u === "weeks")  return n === 1 ? "Semana" : "Semanas";
+    if (u === "weeks") return n === 1 ? "Semana" : "Semanas";
+    if (u === "biweekly") return n === 1 ? "Quincena" : "Quincenas";
     return n === 1 ? "Día" : "Días";
 };
 
@@ -435,16 +436,23 @@ export const generatePaymentReceipt = (
     // ── Derive installment info from schedule ─────────────────
     const schedule: any[] = Array.isArray(loan.paymentSchedule) ? loan.paymentSchedule : [];
 
-    // Calculate total paid BEFORE this payment (using sorted list)
-    const sortedPayments: any[] = [...(loan.payments ?? [])].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    // La mora cobrada no amortiza capital, así que se excluye de todo cálculo de saldo/cuota
+    const lateFeePart = payment.lateFeeAmount || 0;
+    const principalPortion = payment.amount - lateFeePart;
+
+    // Calculate total paid BEFORE this payment (using sorted list), excluyendo la porción de mora de cada abono
+    // Desempata por createdAt cuando dos pagos comparten la misma fecha (el formulario no captura hora)
+    const sortedPayments: any[] = [...(loan.payments ?? [])].sort((a, b) => {
+        const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (diff !== 0) return diff;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
     const paymentIdx = sortedPayments.findIndex((p: any) => p.id === payment.id);
     let paidBefore = 0;
     if (paymentIdx > 0) {
         paidBefore = sortedPayments
             .slice(0, paymentIdx)
-            .reduce((s: number, p: any) => s + p.amount, 0);
+            .reduce((s: number, p: any) => s + (p.amount - (p.lateFeeAmount || 0)), 0);
     }
 
     // Find which installment row this payment corresponds to
@@ -467,10 +475,10 @@ export const generatePaymentReceipt = (
             accumulated += row.totalPayment;
         }
     } else {
-        // Fallback: proportional breakdown
+        // Fallback: proportional breakdown (excluyendo la mora, que no amortiza)
         const principalRatio = loan.amount / loan.totalToPay;
-        capitalPart  = parseFloat((payment.amount * principalRatio).toFixed(2));
-        interestPart = parseFloat((payment.amount - capitalPart).toFixed(2));
+        capitalPart  = parseFloat((principalPortion * principalRatio).toFixed(2));
+        interestPart = parseFloat((principalPortion - capitalPart).toFixed(2));
         installmentNumber = sortedPayments.length;
     }
 
@@ -478,7 +486,7 @@ export const generatePaymentReceipt = (
 
     // ── Balances ──────────────────────────────────────────────
     const prevBalance  = loan.totalToPay - paidBefore;
-    const afterBalance = Math.max(0, prevBalance - payment.amount);
+    const afterBalance = Math.max(0, prevBalance - principalPortion);
 
     // ── Times ─────────────────────────────────────────────────
     // Parse pure local date from payment.date (YYYY-MM-DD or ISO) to avoid UTC shifting
@@ -521,6 +529,7 @@ export const generatePaymentReceipt = (
     if (loan.client.phone) estimatedH += 3.5;
     if (afterBalance === 0) estimatedH += 13;
     if (nextInstallment && afterBalance > 0) estimatedH += 9;
+    if (lateFeePart > 0) estimatedH += 4.5;
     
     const doc = new jsPDF({ unit: "mm", format: [W, estimatedH] });
 
@@ -630,7 +639,7 @@ export const generatePaymentReceipt = (
     y += 5;
     kv(doc, "Interés del período:", `RD$ ${fmt(interestPart)}`, y);
     y += 5;
-    kv(doc, "Mora:", "RD$ 0.00", y);
+    kv(doc, "Mora:", `RD$ ${fmt(lateFeePart)}`, y);
     y += 5;
     kv(doc, "Otros cargos:", "RD$ 0.00", y);
 
@@ -681,8 +690,12 @@ export const generatePaymentReceipt = (
     doc.setTextColor(0, 0, 0);
     kv(doc, "Saldo anterior:", `RD$ ${fmt(prevBalance)}`, y);
     y += 4.5;
-    kv(doc, "Pago aplicado:", `- RD$ ${fmt(payment.amount)}`, y);
+    kv(doc, "Abonado a capital:", `- RD$ ${fmt(principalPortion)}`, y);
     y += 4.5;
+    if (lateFeePart > 0) {
+        kv(doc, "Mora cobrada (no amortiza):", `RD$ ${fmt(lateFeePart)}`, y);
+        y += 4.5;
+    }
 
     // Saldo actual con color
     doc.setFont("helvetica", "bold");
@@ -754,12 +767,16 @@ export const generateAccountStatement = (loan: any, config: CompanyConfig = DEFA
     const today  = new Date();
     const loanNo = seqNo("PR", loan.id);
     const schedule: any[] = Array.isArray(loan.paymentSchedule) ? loan.paymentSchedule : [];
-    const payments: any[] = [...(loan.payments ?? [])].sort(
-        (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    const payments: any[] = [...(loan.payments ?? [])].sort((a: any, b: any) => {
+        const diff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (diff !== 0) return diff;
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
 
     const installmentAmt = loan.installmentAmount ?? (loan.totalToPay / loan.term);
-    const paidTotal = payments.reduce((s: number, p: any) => s + p.amount, 0);
+    // La mora cobrada no amortiza capital: se excluye del total abonado al contrato
+    const paidTotal = payments.reduce((s: number, p: any) => s + (p.amount - (p.lateFeeAmount || 0)), 0);
+    const paidMoraTotal = payments.reduce((s: number, p: any) => s + (p.lateFeeAmount || 0), 0);
     const statusLabel = loan.status === "paid" ? "PAGO COMPLETO" : loan.status === "overdue" ? "EN MORA" : "ACTIVO";
     const statusColor: [number, number, number] =
         loan.status === "paid"    ? [22, 101, 52] :
@@ -882,12 +899,15 @@ export const generateAccountStatement = (loan: any, config: CompanyConfig = DEFA
     y += infoBoxH + 6;
 
     // ── KPI Row ──────────────────────────────────────────────
-    const kpiW = A4_CW / 3 - 2;
-    const kpis = [
-        { label: "Total Pactado",     value: `RD$ ${fmt(loan.totalToPay)}`, color: [30, 41, 82] as [number,number,number] },
-        { label: "Total Pagado",      value: `RD$ ${fmt(paidTotal)}`,       color: [22, 101, 52] as [number,number,number] },
-        { label: "Saldo Pendiente",   value: `RD$ ${fmt(loan.remainingBalance)}`, color: loan.remainingBalance > 0 ? [180, 60, 60] as [number,number,number] : [22, 101, 52] as [number,number,number] },
+    const kpis: { label: string; value: string; color: [number, number, number] }[] = [
+        { label: "Total Pactado",     value: `RD$ ${fmt(loan.totalToPay)}`, color: [30, 41, 82] },
+        { label: "Total Pagado",      value: `RD$ ${fmt(paidTotal)}`,       color: [22, 101, 52] },
+        { label: "Saldo Pendiente",   value: `RD$ ${fmt(loan.remainingBalance)}`, color: loan.remainingBalance > 0 ? [180, 60, 60] : [22, 101, 52] },
     ];
+    if (paidMoraTotal > 0) {
+        kpis.push({ label: "Mora Cobrada", value: `RD$ ${fmt(paidMoraTotal)}`, color: [153, 27, 27] });
+    }
+    const kpiW = A4_CW / kpis.length - 2;
 
     kpis.forEach((kpi, idx) => {
         const kx = A4_L + idx * (kpiW + 3);
@@ -916,15 +936,17 @@ export const generateAccountStatement = (loan: any, config: CompanyConfig = DEFA
 
         (doc as any).autoTable({
             startY: y,
-            head: [["#", "Fecha", "Monto Pagado", "Método", "Saldo Después"]],
+            head: [["#", "Fecha", "Monto Pagado", "Mora Incluida", "Método", "Saldo Después"]],
             body: (() => {
                 let running = loan.totalToPay;
                 return payments.map((p: any, i: number) => {
-                    running = Math.max(0, running - p.amount);
+                    const fee = p.lateFeeAmount || 0;
+                    running = Math.max(0, running - (p.amount - fee));
                     return [
                         i + 1,
                         fmtDate(p.date),
                         `RD$ ${fmt(p.amount)}`,
+                        fee > 0 ? `RD$ ${fmt(fee)}` : "—",
                         (p.method === "cash" ? "Efectivo" : p.method === "transfer" ? "Transferencia" : "Tarjeta"),
                         `RD$ ${fmt(running)}`,
                     ];
@@ -936,7 +958,8 @@ export const generateAccountStatement = (loan: any, config: CompanyConfig = DEFA
             columnStyles: {
                 0: { halign: "center", cellWidth: 10 },
                 2: { halign: "right" },
-                4: { halign: "right" },
+                3: { halign: "right", textColor: [180, 60, 60] },
+                5: { halign: "right" },
             },
             margin: { left: A4_L, right: 210 - A4_R },
         });

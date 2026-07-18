@@ -6,8 +6,8 @@ import {
     CreditCard, Calendar, ArrowLeft, Download,
     PlusCircle, History, AlertCircle, CheckCircle2,
     DollarSign, FileText, X, Clock, Wallet,
-    Table2, TrendingDown, ChevronRight, BookOpen,
-    Copy, Check, Building2
+    Table2, TrendingDown, TrendingUp, ChevronRight, BookOpen,
+    Copy, Check, Building2, ShieldAlert
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -57,9 +57,14 @@ export default function LoanDetailsPage() {
     const fetchLoanData = async () => {
         try {
             const res = await fetch(`/api/loans/${params.id}`);
-            if (res.ok) setLoan(await res.json());
+            if (res.ok) {
+                const fresh = await res.json();
+                setLoan(fresh);
+                return fresh;
+            }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
+        return null;
     };
 
     const fetchCompanyConfig = async () => {
@@ -82,7 +87,13 @@ export default function LoanDetailsPage() {
         e.preventDefault();
         const rawAmount = parseFloat(paymentForm.amount);
         if (isNaN(rawAmount) || rawAmount <= 0) return alert("Ingrese un monto válido.");
-        if (rawAmount > loan.remainingBalance) return alert("El monto supera el saldo restante.");
+        if (rawAmount > loan.remainingBalance + accumulatedLateFee) return alert("El monto supera el saldo restante (incluyendo la mora).");
+        if (accumulatedLateFee > 0) {
+            const minRequired = Math.min((loan.installmentAmount || 0) + accumulatedLateFee, loan.remainingBalance + accumulatedLateFee);
+            if (rawAmount + 0.01 < minRequired) {
+                return alert(`Este préstamo tiene una mora pendiente de $${fmtCurrency(accumulatedLateFee)}. Debes abonar al menos $${fmtCurrency(minRequired)} (cuota + mora) para continuar.`);
+            }
+        }
 
         setIsSubmitting(true);
         try {
@@ -95,10 +106,10 @@ export default function LoanDetailsPage() {
                 const data = await res.json();
                 setIsPaymentModalOpen(false);
                 setPaymentForm({ ...paymentForm, amount: "" });
-                await fetchLoanData();
+                const freshLoan = await fetchLoanData();
                 generatePaymentReceipt(
                     data.payment,
-                    { ...loan, remainingBalance: data.updatedLoan.remainingBalance },
+                    freshLoan || { ...loan, remainingBalance: data.updatedLoan.remainingBalance },
                     session?.user?.name || "Administrador",
                     companyConfig
                 );
@@ -141,6 +152,15 @@ export default function LoanDetailsPage() {
         const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
         return Math.round((dueUTC - nowUTC) / (1000 * 60 * 60 * 24));
     }, [nextInstallment, loan]);
+
+    // El servidor ya calcula la mora en base a la cuota más próxima vencida (no la fecha final del préstamo)
+    const accumulatedLateFee: number = loan?.accumulatedLateFee || 0;
+
+    // Mora ya cobrada históricamente (suma de todos los pagos), distinto de la mora pendiente actual
+    const totalLateFeeCollected: number = useMemo(() => {
+        return (loan?.payments || []).reduce((s: number, p: any) => s + (p.lateFeeAmount || 0), 0);
+    }, [loan]);
+    const daysOverdue: number = loan?.daysOverdue || 0;
 
     const fmtCurrency = (n: number) =>
         n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -188,7 +208,7 @@ export default function LoanDetailsPage() {
                             <span>
                                 {loan.status === "active" ? "Activo" :
                                  loan.status === "paid" ? "Pagado" :
-                                 loan.status === "overdue" ? "Vencido" : loan.status}
+                                 loan.status === "overdue" ? `En Mora · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""}` : loan.status}
                             </span>
                         </div>
                     </header>
@@ -223,7 +243,10 @@ export default function LoanDetailsPage() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="next-amount">${fmtCurrency(nextInstallment.totalPayment)}</div>
+                            <div className="next-amount">
+                                ${fmtCurrency(nextInstallment.totalPayment)}
+                                {accumulatedLateFee > 0 && <span style={{display:"block", fontSize:"0.75rem", color:"#f43f5e", marginTop:"4px"}}>+ ${fmtCurrency(accumulatedLateFee)} de mora</span>}
+                            </div>
                         </div>
                     )}
 
@@ -232,7 +255,7 @@ export default function LoanDetailsPage() {
                             className="btn-pay-pro"
                             onClick={() => {
                                 if (loan.installmentAmount) {
-                                    setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount, loan.remainingBalance)) }));
+                                    setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount + accumulatedLateFee, loan.remainingBalance + accumulatedLateFee)) }));
                                 }
                                 setIsPaymentModalOpen(true);
                             }}
@@ -286,6 +309,16 @@ export default function LoanDetailsPage() {
                             <div className="b-label"><TrendingDown size={14} /> Interés Total</div>
                             <div className="b-value gold">${fmtCurrency(loan.totalToPay - loan.amount)}</div>
                         </div>
+                        {totalLateFeeCollected > 0 && (
+                            <div className="bal-item mora-collected">
+                                <div className="b-label"><ShieldAlert size={14} /> Mora Cobrada (Total)</div>
+                                <div className="b-value mora-collected-value">${fmtCurrency(totalLateFeeCollected)}</div>
+                            </div>
+                        )}
+                        <div className="bal-item ganancia-total">
+                            <div className="b-label"><TrendingUp size={14} /> Ganancia Total {totalLateFeeCollected > 0 ? "(Interés + Mora)" : ""}</div>
+                            <div className="b-value-big ganancia-value">${fmtCurrency((loan.totalToPay - loan.amount) + totalLateFeeCollected)}</div>
+                        </div>
                         <div className="bal-item">
                             <div className="b-label"><Wallet size={14} /> Total Pactado</div>
                             <div className="b-value">${fmtCurrency(loan.totalToPay)}</div>
@@ -294,6 +327,12 @@ export default function LoanDetailsPage() {
                             <div className="b-label"><AlertCircle size={14} /> Saldo Pendiente</div>
                             <div className="b-value-big">${fmtCurrency(loan.remainingBalance)}</div>
                         </div>
+                        {accumulatedLateFee > 0 && (
+                            <div className="bal-item mora-alert">
+                                <div className="b-label"><AlertCircle size={14} /> Mora Acumulada ({daysOverdue} día{daysOverdue !== 1 ? "s" : ""})</div>
+                                <div className="b-value-big mora-value">+ ${fmtCurrency(accumulatedLateFee)}</div>
+                            </div>
+                        )}
                         <div className="bal-item success">
                             <div className="b-label"><CheckCircle2 size={14} /> Capital Recuperado</div>
                             <div className="b-value">${fmtCurrency(paidAmount)}</div>
@@ -320,10 +359,12 @@ export default function LoanDetailsPage() {
                     <div className="loan-detail-pills">
                         <span className="detail-pill">{loan.interestRate}%
                             {loan.rateFrequency === "monthly" ? " mensual" :
-                             loan.rateFrequency === "annual" ? " anual" : " diario"}
+                             loan.rateFrequency === "annual" ? " anual" :
+                             loan.rateFrequency === "biweekly" ? " quincenal" : " diario"}
                         </span>
                         <span className="detail-pill">{loan.term} {
                             loan.termUnit === "months" ? "meses" :
+                            loan.termUnit === "biweekly" ? "quincenas" :
                             loan.termUnit === "weeks" ? "semanas" : "días"
                         }</span>
                         <span className="detail-pill">{loan.interestType === "simple" ? "Simple" : "Francés"}</span>
@@ -599,24 +640,46 @@ export default function LoanDetailsPage() {
                                 <button className="btn-close-modal" onClick={() => setIsPaymentModalOpen(false)}><X size={20} /></button>
                             </header>
 
+                            {accumulatedLateFee > 0 && (
+                                <div className="mora-mandatory-notice">
+                                    <AlertCircle size={14} />
+                                    <span>Este préstamo tiene una mora de ${fmtCurrency(accumulatedLateFee)} pendiente. Todo abono debe incluirla.</span>
+                                </div>
+                            )}
+
                             <div className="pmt-hints-row">
                                 {loan.installmentAmount && (
-                                    <button
-                                        type="button"
-                                        className="pmt-hint-btn"
-                                        onClick={() => setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount, loan.remainingBalance)) }))}
-                                    >
-                                        <span className="pmt-hint-label">Pagar cuota</span>
-                                        <span className="pmt-hint-value">${fmtCurrency(Math.min(loan.installmentAmount, loan.remainingBalance))}</span>
-                                    </button>
+                                    <>
+                                        {accumulatedLateFee === 0 && (
+                                            <button
+                                                type="button"
+                                                className="pmt-hint-btn"
+                                                onClick={() => setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount, loan.remainingBalance)) }))}
+                                            >
+                                                <span className="pmt-hint-label">Pagar cuota</span>
+                                                <span className="pmt-hint-value">${fmtCurrency(Math.min(loan.installmentAmount, loan.remainingBalance))}</span>
+                                            </button>
+                                        )}
+                                        {accumulatedLateFee > 0 && (
+                                            <button
+                                                type="button"
+                                                className="pmt-hint-btn"
+                                                onClick={() => setPaymentForm(f => ({ ...f, amount: String(Math.min(loan.installmentAmount + accumulatedLateFee, loan.remainingBalance + accumulatedLateFee)) }))}
+                                                style={{ borderColor: "rgba(244,63,94,0.3)" }}
+                                            >
+                                                <span className="pmt-hint-label" style={{ color: "#fca5a5" }}>Cuota + Mora (obligatorio)</span>
+                                                <span className="pmt-hint-value">${fmtCurrency(Math.min(loan.installmentAmount + accumulatedLateFee, loan.remainingBalance + accumulatedLateFee))}</span>
+                                            </button>
+                                        )}
+                                    </>
                                 )}
                                 <button
                                     type="button"
                                     className="pmt-hint-btn pmt-hint-total"
-                                    onClick={() => setPaymentForm(f => ({ ...f, amount: String(loan.remainingBalance) }))}
+                                    onClick={() => setPaymentForm(f => ({ ...f, amount: String(loan.remainingBalance + accumulatedLateFee) }))}
                                 >
-                                    <span className="pmt-hint-label">Saldar total</span>
-                                    <span className="pmt-hint-value">${fmtCurrency(loan.remainingBalance)}</span>
+                                    <span className="pmt-hint-label">Saldar total {accumulatedLateFee > 0 ? "(incluye mora)" : ""}</span>
+                                    <span className="pmt-hint-value">${fmtCurrency(loan.remainingBalance + accumulatedLateFee)}</span>
                                 </button>
                             </div>
 
@@ -640,7 +703,8 @@ export default function LoanDetailsPage() {
                                         />
                                     </div>
                                     <div className="limit-hint">
-                                        <span>Máximo: ${fmtCurrency(loan.remainingBalance)}</span>
+                                        <span>Máximo: ${fmtCurrency(loan.remainingBalance + accumulatedLateFee)}</span>
+                                        {accumulatedLateFee > 0 && <span className="limit-hint-min">Mínimo (incluye mora): ${fmtCurrency(Math.min((loan.installmentAmount || 0) + accumulatedLateFee, loan.remainingBalance + accumulatedLateFee))}</span>}
                                     </div>
                                 </div>
 
@@ -799,6 +863,15 @@ export default function LoanDetailsPage() {
         .b-value-big { font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
         .bal-item.danger .b-value-big { color: #f43f5e; }
         .bal-item.success .b-value { color: #10b981; }
+        .bal-item.mora-alert { background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); border-radius: 12px; padding: 0.85rem 1rem; }
+        .bal-item.mora-alert .b-label { color: #f43f5e; font-weight: 800; }
+        .b-value-big.mora-value { color: #f43f5e; font-size: 1.5rem; }
+        .bal-item.mora-collected { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; padding: 0.85rem 1rem; }
+        .bal-item.mora-collected .b-label { color: #f59e0b; }
+        .b-value.mora-collected-value { color: #f59e0b; }
+        .bal-item.ganancia-total { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 0.85rem 1rem; }
+        .bal-item.ganancia-total .b-label { color: #10b981; font-weight: 800; }
+        .b-value-big.ganancia-value { color: #10b981; font-size: 1.6rem; }
 
         .bal-mini-info-row { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.04); display: flex; flex-direction: column; gap: 0.5rem; }
         .bal-mini-info { display: flex; align-items: center; gap: 0.5rem; color: #475569; font-size: 0.8rem; font-weight: 600; }
@@ -862,14 +935,16 @@ export default function LoanDetailsPage() {
         .pmt-hint-total { border-color: rgba(99,102,241,0.35); background: rgba(99,102,241,0.08); }
         .pmt-hint-total:hover { background: rgba(99,102,241,0.16); border-color: rgba(99,102,241,0.55); }
         .pmt-hint-total .pmt-hint-value { color: #818cf8; }
+        .mora-mandatory-notice { display: flex; align-items: center; gap: 0.6rem; background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.25); color: #fca5a5; font-size: 0.8rem; font-weight: 600; padding: 0.7rem 1rem; border-radius: 10px; margin-bottom: 1rem; line-height: 1.4; }
         .field-group-modal { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
         .field-group-modal label { font-size: 0.85rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
         .input-icon-box { position: relative; display: flex; align-items: center; }
         .input-icon-box svg { position: absolute; left: 1.25rem; color: #475569; z-index: 1; }
         .input-pro-modal { width: 100%; background: rgba(15,23,42,0.4); border: 1px solid var(--border); color: white; padding: 1rem 1.25rem 1rem 2.75rem; border-radius: 12px; outline: none; font-size: 1.25rem; font-weight: 700; transition: border-color 0.2s; }
         .input-pro-modal:focus { border-color: var(--primary); }
-        .limit-hint { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+        .limit-hint { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
         .limit-hint span { font-size: 0.75rem; font-weight: 700; color: #475569; background: rgba(255,255,255,0.03); padding: 0.2rem 0.5rem; border-radius: 4px; }
+        .limit-hint-min { color: #f43f5e !important; background: rgba(244,63,94,0.08) !important; }
         .form-row-modal { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem; }
         .select-pro-modal { width: 100%; background: rgba(15,23,42,0.4); border: 1px solid var(--border); color: white; padding: 1rem; border-radius: 12px; outline: none; font-weight: 600; appearance: none; }
         .select-pro-modal option { background: #0f172a; }

@@ -69,6 +69,7 @@ model Payment {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   receiptNumber Int?
   amount        Float
+  lateFeeAmount Float?   // porción de `amount` que corresponde a mora (no amortiza capital)
   date          DateTime @default(now())
   method        String   // "cash", "transfer", etc.
   loanId        String   @db.ObjectId

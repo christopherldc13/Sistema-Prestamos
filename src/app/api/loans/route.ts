@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { calculateLoan, isOverdue, type RateFrequency, type TermUnit, type InterestType } from "@/lib/loan-calculator";
+import { calculateLoan, getOverdueInfo, type RateFrequency, type TermUnit, type InterestType } from "@/lib/loan-calculator";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPlan } from "@/lib/plans";
@@ -25,15 +25,27 @@ export async function GET() {
             },
         });
 
+        const settings = await prisma.settings.findUnique({ where: { userId } });
+        const lateFeeRules = (settings?.value as any)?.lateFeeRules || [];
+
         const updates: Promise<any>[] = [];
         for (const loan of loans) {
             const loanAny = loan as any;
-            if (loan.status === "active" && isOverdue(loanAny.dueDate, loan.status)) {
+            if (loan.status === "paid") continue;
+
+            const schedule = (loan.paymentSchedule as any[]) || [];
+            const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
+            const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
+
+            if (loan.status !== newStatus) {
                 updates.push(
-                    prisma.loan.update({ where: { id: loan.id }, data: { status: "overdue" } })
+                    prisma.loan.update({ where: { id: loan.id }, data: { status: newStatus } })
                 );
-                loan.status = "overdue";
+                loan.status = newStatus;
             }
+
+            loanAny.daysOverdue = overdueInfo.daysOverdue;
+            loanAny.accumulatedLateFee = overdueInfo.isOverdue ? overdueInfo.lateFee : 0;
         }
         if (updates.length > 0) await Promise.all(updates);
 

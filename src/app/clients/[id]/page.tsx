@@ -185,7 +185,7 @@ export default function ClientDetailsPage() {
                                         </div>
                                         <div className="data-col">
                                             <label>Cuotas</label>
-                                            <p>{loan.term} {loan.termUnit}</p>
+                                            <p>{loan.term} {loan.termUnit === 'months' ? 'meses' : loan.termUnit === 'biweekly' ? 'quincenas' : loan.termUnit === 'weeks' ? 'semanas' : 'días'}</p>
                                         </div>
                                     </div>
 

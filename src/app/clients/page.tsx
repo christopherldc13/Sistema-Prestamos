@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { UserPlus, Search, Phone, Mail, MapPin, MoreVertical, CreditCard, ChevronRight, X, UserCircle, Edit, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { UserPlus, Search, Phone, Mail, MapPin, MoreVertical, CreditCard, ChevronRight, X, Edit, Trash2, Users, AlertTriangle, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -13,6 +13,28 @@ interface Client {
     email?: string;
     address: string;
     loans?: any[];
+}
+
+const AVATAR_GRADIENTS = [
+    "linear-gradient(135deg,#6366f1,#4f46e5)",
+    "linear-gradient(135deg,#a855f7,#7e22ce)",
+    "linear-gradient(135deg,#10b981,#059669)",
+    "linear-gradient(135deg,#f59e0b,#d97706)",
+    "linear-gradient(135deg,#ec4899,#be185d)",
+    "linear-gradient(135deg,#06b6d4,#0891b2)",
+];
+
+function getAvatarGradient(name: string) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+}
+
+function getInitials(name: string) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
 export default function ClientsPage() {
@@ -115,6 +137,12 @@ export default function ClientsPage() {
         c.idNumber.includes(searchTerm)
     );
 
+    const clientStats = useMemo(() => {
+        const withActive = clients.filter(c => c.loans?.some((l: any) => l.status === "active" || l.status === "overdue")).length;
+        const inMora = clients.filter(c => c.loans?.some((l: any) => l.status === "overdue")).length;
+        return { total: clients.length, withActive, inMora };
+    }, [clients]);
+
     return (
         <div className="clients-wrapper" onClick={() => setActiveMenu(null)}>
             <header className="clients-header">
@@ -127,6 +155,28 @@ export default function ClientsPage() {
                     <span>Nuevo Registro</span>
                 </button>
             </header>
+
+            {!loading && clients.length > 0 && (
+                <div className="clients-stats-bar glass-card">
+                    <div className="cstat">
+                        <Users size={15} color="#818cf8" />
+                        <span className="cstat-label">Clientes:</span>
+                        <span className="cstat-value">{clientStats.total}</span>
+                    </div>
+                    <div className="cstat-sep" />
+                    <div className="cstat">
+                        <CreditCard size={15} color="#34d399" />
+                        <span className="cstat-label">Con préstamos activos:</span>
+                        <span className="cstat-value">{clientStats.withActive}</span>
+                    </div>
+                    <div className="cstat-sep" />
+                    <div className="cstat">
+                        <ShieldAlert size={15} color={clientStats.inMora > 0 ? "#f43f5e" : "#475569"} />
+                        <span className="cstat-label">En mora:</span>
+                        <span className="cstat-value" style={{ color: clientStats.inMora > 0 ? "#f43f5e" : undefined }}>{clientStats.inMora}</span>
+                    </div>
+                </div>
+            )}
 
             <div className="search-filter-section">
                 <div className="search-box-pro glass-card">
@@ -154,22 +204,30 @@ export default function ClientsPage() {
                             <span>Cargando base de datos...</span>
                         </div>
                     ) : filteredClients.length > 0 ? (
-                        filteredClients.map((client) => (
+                        filteredClients.map((client) => {
+                            const hasOverdue = client.loans?.some((l: any) => l.status === "overdue");
+                            const hasActive = client.loans?.some((l: any) => l.status === "active" || l.status === "overdue");
+                            const loanCount = client.loans?.length || 0;
+                            return (
                             <motion.div
                                 key={client.id}
                                 layout
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.98 }}
-                                className="glass-card client-card-pro"
+                                className={`glass-card client-card-pro ${hasOverdue ? "card-mora" : ""}`}
                             >
+                                <div className={`card-accent ${hasOverdue ? "accent-mora" : hasActive ? "accent-active" : "accent-none"}`} />
                                 <div className="card-top">
-                                    <div className="avatar-placeholder">
-                                        <UserCircle size={28} />
+                                    <div className="avatar-initials" style={{ background: getAvatarGradient(client.fullName) }}>
+                                        {getInitials(client.fullName)}
                                     </div>
                                     <div className="name-box">
                                         <h3>{client.fullName}</h3>
-                                        <span className="id-badge">ID: {client.idNumber}</span>
+                                        <div className="badge-row">
+                                            <span className="id-badge">ID: {client.idNumber}</span>
+                                            {hasOverdue && <span className="mora-tag"><AlertTriangle size={11} /> En Mora</span>}
+                                        </div>
                                     </div>
 
                                     <div className="menu-container">
@@ -223,17 +281,19 @@ export default function ClientsPage() {
                                 <footer className="card-bottom">
                                     <div className="loan-stats">
                                         <CreditCard size={14} />
-                                        <span>{client.loans?.length || 0} Préstamos</span>
+                                        <span>{loanCount} {loanCount === 1 ? "Préstamo" : "Préstamos"}</span>
                                     </div>
                                     <Link href={`/clients/${client.id}`} className="view-link" onClick={(e) => e.stopPropagation()}>
                                         Detalles <ChevronRight size={14} />
                                     </Link>
                                 </footer>
                             </motion.div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="state-msg">
-                            <p>No se encontraron registros que coincidan.</p>
+                            <div className="empty-icon-box"><Users size={26} /></div>
+                            <p>{searchTerm ? "No se encontraron registros que coincidan." : "Aún no has registrado ningún cliente."}</p>
                         </div>
                     )}
                 </AnimatePresence>
@@ -343,6 +403,12 @@ export default function ClientsPage() {
         }
         .btn-add-client:hover { background: var(--primary-hover); transform: translateY(-2px); }
 
+        .clients-stats-bar { display: flex; align-items: center; padding: 0.9rem 1.5rem; gap: 0; margin-bottom: 1.5rem; }
+        .cstat { display: flex; align-items: center; gap: 0.5rem; flex: 1; justify-content: center; }
+        .cstat-label { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+        .cstat-value { font-size: 0.92rem; font-weight: 800; color: #f8fafc; font-variant-numeric: tabular-nums; }
+        .cstat-sep { width: 1px; height: 22px; background: rgba(255,255,255,0.07); }
+
         .search-filter-section { margin-bottom: 2rem; }
         .search-box-pro { 
           display: flex; align-items: center; padding: 0.5rem 1.25rem; 
@@ -355,17 +421,36 @@ export default function ClientsPage() {
         .clients-grid-adaptive { 
           display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; 
         }
-        .client-card-pro { 
-          display: flex; flex-direction: column; padding: 1.5rem; gap: 1.5rem; 
-          position: relative; z-index: 10;
+        .client-card-pro {
+          display: flex; flex-direction: column; padding: 1.5rem; gap: 1.5rem;
+          position: relative; z-index: 10; overflow: hidden; transition: border-color 0.2s, transform 0.2s;
         }
-        .client-card-pro:hover { border-color: rgba(99, 102, 241, 0.4); }
+        .client-card-pro:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-2px); }
+        .client-card-pro.card-mora:hover { border-color: rgba(244,63,94,0.4); }
+
+        .card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .accent-active { background: linear-gradient(90deg,#6366f1,#a855f7); }
+        .accent-mora   { background: linear-gradient(90deg,#f43f5e,#fb923c); }
+        .accent-none   { background: rgba(255,255,255,0.06); }
 
         .card-top { display: flex; align-items: center; gap: 1rem; position: relative; }
-        .avatar-placeholder { width: 48px; height: 48px; border-radius: 14px; background: rgba(99, 102, 241, 0.1); color: #6366f1; display: flex; align-items: center; justify-content: center; opacity: 0.8; }
-        .name-box h3 { font-size: 1.15rem; font-weight: 700; color: white; margin-bottom: 0.2rem; }
+        .avatar-initials {
+          width: 48px; height: 48px; border-radius: 14px; color: white;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.95rem; font-weight: 800; letter-spacing: -0.02em; flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+        }
+        .name-box { min-width: 0; }
+        .name-box h3 { font-size: 1.15rem; font-weight: 700; color: white; margin-bottom: 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
         .id-badge { font-size: 0.75rem; font-weight: 700; color: #6366f1; background: rgba(99, 102, 241, 0.05); padding: 0.2rem 0.6rem; border-radius: 6px; }
-        
+        .mora-tag {
+          display: flex; align-items: center; gap: 0.3rem;
+          background: rgba(244,63,94,0.12); color: #fb7185; border: 1px solid rgba(244,63,94,0.25);
+          font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+          padding: 0.2rem 0.5rem; border-radius: 20px; white-space: nowrap;
+        }
+
         .menu-container { margin-left: auto; position: relative; }
         .more-btn { background: transparent; border: none; color: #475569; cursor: pointer; padding: 4px; }
         .dropdown-menu {
@@ -414,6 +499,7 @@ export default function ClientsPage() {
         .btn-save-pro { background: #6366f1; color: white; border: none; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; }
 
         .state-msg { grid-column: 1 / -1; text-align: center; padding: 6rem; color: #475569; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .empty-icon-box { width: 56px; height: 56px; border-radius: 16px; background: rgba(99,102,241,0.08); color: #6366f1; display: flex; align-items: center; justify-content: center; }
         .spinner-mini { width: 24px; height: 24px; border: 3px solid rgba(99, 102, 241, 0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -421,6 +507,9 @@ export default function ClientsPage() {
           .clients-header { flex-direction: column; align-items: flex-start; gap: 1rem; padding-bottom: 1rem; }
           .btn-add-client { width: 100%; justify-content: center; }
           .title-pro { font-size: 1.6rem; line-height: 1.2; }
+          .clients-stats-bar { flex-direction: column; align-items: stretch; gap: 0.6rem; padding: 0.9rem 1rem; }
+          .cstat { justify-content: flex-start; }
+          .cstat-sep { display: none; }
           .clients-grid-adaptive { grid-template-columns: 1fr; gap: 1rem;}
           .form-row-pro { grid-template-columns: 1fr; gap: 1rem; }
           .area-fix { grid-column: span 1; }

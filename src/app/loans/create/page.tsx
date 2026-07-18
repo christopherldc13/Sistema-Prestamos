@@ -19,6 +19,7 @@ import { getPlan, type PlanFeatures } from "@/lib/plans";
 
 const RATE_FREQ_LABELS: Record<RateFrequency, string> = {
     daily: "Diaria",
+    biweekly: "Quincenal",
     monthly: "Mensual",
     annual: "Anual",
 };
@@ -26,6 +27,7 @@ const RATE_FREQ_LABELS: Record<RateFrequency, string> = {
 const TERM_UNIT_LABELS: Record<TermUnit, string> = {
     days: "día",
     weeks: "semana",
+    biweekly: "quincena",
     months: "mes",
 };
 
@@ -213,6 +215,7 @@ export default function CreateLoanPage() {
                                             onChange={e => setFormData({ ...formData, rateFrequency: e.target.value as RateFrequency })}
                                         >
                                             <option value="daily">% Diaria</option>
+                                            <option value="biweekly">% Quincenal</option>
                                             <option value="monthly">% Mensual</option>
                                             <option value="annual">% Anual</option>
                                         </select>
@@ -236,6 +239,7 @@ export default function CreateLoanPage() {
                                         >
                                             <option value="days">Días</option>
                                             <option value="weeks">Semanas</option>
+                                            <option value="biweekly">Quincenas</option>
                                             <option value="months">Meses</option>
                                         </select>
                                     </div>
@@ -315,7 +319,7 @@ export default function CreateLoanPage() {
                                     <span className="formula-label">Tasa Periódica Aplicada</span>
                                     <span className="formula-text">
                                         {(calc.periodicRate * 100).toFixed(4)}% por {periodLabel}
-                                        {" "}({RATE_FREQ_LABELS[formData.rateFrequency].toLowerCase()} → {formData.termUnit === "months" ? "mensual" : formData.termUnit === "weeks" ? "semanal" : "diaria"})
+                                        {" "}({RATE_FREQ_LABELS[formData.rateFrequency].toLowerCase()} → {formData.termUnit === "months" ? "mensual" : formData.termUnit === "biweekly" ? "quincenal" : formData.termUnit === "weeks" ? "semanal" : "diaria"})
                                     </span>
                                 </div>
 

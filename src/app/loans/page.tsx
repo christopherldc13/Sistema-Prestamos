@@ -130,8 +130,13 @@ export default function LoansPage() {
                                             <td>
                                                 <div className="pending-cell">
                                                     <span className={`amount-pending ${loan.remainingBalance > 0 ? 'highlight' : ''}`}>
-                                                        ${loan.remainingBalance.toLocaleString()}
+                                                        ${((loan.remainingBalance || 0) + (loan.accumulatedLateFee || 0)).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </span>
+                                                    {loan.accumulatedLateFee > 0 && (
+                                                        <span style={{ fontSize: "0.65rem", color: "#f43f5e", fontWeight: "700", marginTop: "-4px" }}>
+                                                            Incluye ${loan.accumulatedLateFee.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} de mora
+                                                        </span>
+                                                    )}
                                                     <div className="mini-progress">
                                                         <div
                                                             className="progress-fill"
@@ -143,7 +148,7 @@ export default function LoansPage() {
                                             <td>
                                                 <div className="term-cell">
                                                     <Calendar size={14} />
-                                                    <span>{loan.term} {loan.termUnit === 'months' ? 'Meses' : loan.termUnit === 'weeks' ? 'Sems' : 'Días'}</span>
+                                                    <span>{loan.term} {loan.termUnit === 'months' ? 'Meses' : loan.termUnit === 'biweekly' ? 'Qnas' : loan.termUnit === 'weeks' ? 'Sems' : 'Días'}</span>
                                                 </div>
                                             </td>
                                             <td>

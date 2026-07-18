@@ -43,13 +43,17 @@ export async function POST(req: NextRequest) {
         const userId = (session.user as any).id;
 
         const body = await req.json();
-        
+
+        // Merge con lo existente para no perder campos que este cliente no envía (ej. bankAccounts)
+        const existing = await prisma.settings.findUnique({ where: { userId } });
+        const mergedValue = { ...(existing?.value as any || {}), ...body };
+
         const settings = await prisma.settings.upsert({
             where: { userId },
-            update: { value: body },
+            update: { value: mergedValue },
             create: {
                 userId,
-                value: body
+                value: mergedValue
             }
         });
         

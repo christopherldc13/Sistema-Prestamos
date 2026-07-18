@@ -6,7 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LogOut, User, LayoutDashboard, Users, CreditCard,
   BarChart3, Menu, X, Settings, AlertTriangle, Clock,
-  ShieldAlert, ShieldCheck, Zap, ChevronDown
+  ShieldAlert, ShieldCheck, Zap, ChevronDown, ChevronRight
 } from "lucide-react";
 import { getPlan, type PlanId } from "@/lib/plans";
 
@@ -119,38 +119,47 @@ export function Navbar() {
                 <div className="user-dropdown">
                   {/* User header */}
                   <div className="dd-header">
-                    <div className="dd-avatar">
-                      <User size={17} />
+                    <div className="dd-avatar-ring">
+                      <div className="dd-avatar"><User size={18} /></div>
                     </div>
                     <div className="dd-info">
                       <p className="dd-name">{session.user?.name || "Admin"}</p>
                       <p className="dd-role">{isSuperadmin ? "Super Admin" : "Administrador"}</p>
                     </div>
+                    {plan && !isSuperadmin && (
+                      <div className="dd-plan-badge" style={{ borderColor: plan.color + "50", color: plan.color }}>
+                        <Zap size={9} />{plan.name}
+                      </div>
+                    )}
                   </div>
 
                   {!isSuperadmin && (
-                    <>
+                    <div className="dd-group">
                       <div className="dd-section-label">Cuenta</div>
                       <Link href="/plans" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-yellow"><Zap size={13} /></div>
+                        <div className="dd-icon dd-icon-yellow"><Zap size={14} /></div>
                         <span className="dd-item-text">Mis Planes</span>
+                        <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
                       <Link href="/subscription" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-green"><ShieldCheck size={13} /></div>
+                        <div className="dd-icon dd-icon-green"><ShieldCheck size={14} /></div>
                         <span className="dd-item-text">Suscripción</span>
+                        <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
                       <Link href="/settings" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-slate"><Settings size={13} /></div>
+                        <div className="dd-icon dd-icon-slate"><Settings size={14} /></div>
                         <span className="dd-item-text">Configuración</span>
+                        <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
-                    </>
+                    </div>
                   )}
 
-                  <div className="dd-sep" />
-                  <button className="dd-logout" onClick={() => signOut({ callbackUrl: "/login" })}>
-                    <div className="dd-icon dd-icon-red"><LogOut size={13} /></div>
-                    <span className="dd-item-text">Cerrar Sesión</span>
-                  </button>
+                  <div className="dd-footer">
+                    <button className="dd-logout" onClick={() => signOut({ callbackUrl: "/login" })}>
+                      <LogOut size={15} />
+                      <span>Cerrar Sesión</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -353,16 +362,17 @@ export function Navbar() {
           /* ── Dropdown panel ── */
           .user-dropdown {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 12px);
             right: 0;
-            width: 220px;
-            background: #0f172a;
+            width: 250px;
+            background: linear-gradient(180deg, #141d33, #0f172a 45%);
             border: 1px solid rgba(255,255,255,0.09);
-            border-radius: 16px;
-            padding: 6px;
-            box-shadow: 0 24px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.03);
+            border-radius: 18px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 28px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
             z-index: 100;
-            animation: dd-in 0.14s cubic-bezier(.22,.68,0,1.2);
+            animation: dd-in 0.16s cubic-bezier(.22,.68,0,1.2);
           }
           @keyframes dd-in {
             from { opacity:0; transform:translateY(-8px) scale(.96); }
@@ -371,53 +381,84 @@ export function Navbar() {
 
           /* Header */
           .dd-header {
+            position: relative;
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 10px;
-            padding: 10px 10px 12px;
+            gap: 11px;
+            padding: 16px 14px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.07) 70%);
             border-bottom: 1px solid rgba(255,255,255,0.07);
-            margin-bottom: 4px;
           }
-          .dd-avatar {
-            width: 38px;
-            height: 38px;
-            border-radius: 11px;
-            background: linear-gradient(135deg,#6366f1,#a855f7);
+          .dd-avatar-ring {
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            padding: 2px;
+            background: linear-gradient(135deg,#818cf8,#c084fc);
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 0 14px rgba(99,102,241,0.4);
-            color: #fff;
+            box-shadow: 0 4px 16px rgba(99,102,241,0.45);
           }
-          .dd-info { display:flex; flex-direction:column; gap:1px; min-width:0; }
+          .dd-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 11px;
+            background: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #c7d2fe;
+          }
+          .dd-info { display:flex; flex-direction:column; gap:2px; min-width:0; }
           .dd-name {
             margin: 0;
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #f1f5f9;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #f8fafc;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            letter-spacing: -0.01em;
           }
           .dd-role {
             margin: 0;
-            font-size: 0.68rem;
-            font-weight: 600;
-            color: #818cf8;
+            font-size: 0.66rem;
+            font-weight: 700;
+            color: #a5b4fc;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.09em;
           }
+          .dd-plan-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 3px 7px;
+            border-radius: 20px;
+            border: 1px solid;
+            background: rgba(15,23,42,0.5);
+          }
+
+          /* Item group */
+          .dd-group { padding: 8px; display: flex; flex-direction: column; gap: 1px; }
 
           /* Section label */
           .dd-section-label {
-            font-size: 0.67rem;
-            font-weight: 700;
+            font-size: 0.64rem;
+            font-weight: 800;
             color: #475569;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            padding: 4px 10px 2px;
+            letter-spacing: 0.11em;
+            padding: 6px 8px 5px;
           }
 
           /* Items */
@@ -425,61 +466,63 @@ export function Navbar() {
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 10px;
-            color: #94a3b8;
+            gap: 11px;
+            padding: 9px 8px;
+            border-radius: 11px;
+            color: #cbd5e1;
             text-decoration: none;
-            font-size: 0.855rem;
-            font-weight: 500;
-            transition: background 0.13s, color 0.13s;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.15s, transform 0.15s;
             cursor: pointer;
             width: 100%;
           }
-          .dd-item:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
-          .dd-item-text { line-height:1; }
+          .dd-item:hover { background: rgba(255,255,255,0.055); transform: translateX(2px); }
+          .dd-item-text { line-height:1; flex: 1; }
+          .dd-item-arrow {
+            color: #475569;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity 0.15s, transform 0.15s;
+            flex-shrink: 0;
+          }
+          .dd-item:hover .dd-item-arrow { opacity: 1; transform: translateX(0); }
 
           /* Icons */
           .dd-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
           }
-          .dd-icon-yellow { background:rgba(250,204,21,.14); color:#fbbf24; }
-          .dd-icon-green  { background:rgba(34,197,94,.14);  color:#4ade80; }
-          .dd-icon-slate  { background:rgba(148,163,184,.1); color:#94a3b8; }
-          .dd-icon-red    { background:rgba(239,68,68,.14);  color:#f87171; }
+          .dd-icon-yellow { background: linear-gradient(135deg, rgba(250,204,21,.25), rgba(250,204,21,.06)); color:#fbbf24; }
+          .dd-icon-green  { background: linear-gradient(135deg, rgba(34,197,94,.25),  rgba(34,197,94,.06));  color:#4ade80; }
+          .dd-icon-slate  { background: linear-gradient(135deg, rgba(148,163,184,.2), rgba(148,163,184,.05)); color:#cbd5e1; }
 
-          /* Separator */
-          .dd-sep { height:1px; background:rgba(255,255,255,0.07); margin:4px 6px; }
-
-          /* Logout */
+          /* Footer / logout */
+          .dd-footer { padding: 8px; padding-top: 2px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px; }
           .dd-logout {
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 10px;
-            color: #f87171;
-            font-size: 0.855rem;
-            font-weight: 500;
-            background: transparent;
-            border: none;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 11px;
+            color: #fb7185;
+            font-size: 0.85rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, rgba(244,63,94,.14), rgba(244,63,94,.05));
+            border: 1px solid rgba(244,63,94,.16);
             cursor: pointer;
             width: 100%;
-            transition: background 0.13s, color 0.13s;
+            margin-top: 6px;
+            transition: background 0.15s, border-color 0.15s;
           }
-          .dd-logout:hover { background:rgba(239,68,68,.1); color:#fca5a5; }
-
-          /* legacy aliases kept for mobile */
-          .dropdown-divider { height:1px; background:rgba(255,255,255,0.07); margin:4px 6px; }
-          .dropdown-item, .dropdown-logout { display:flex; flex-direction:row; align-items:center; }
-          .item-icon { display:flex; align-items:center; justify-content:center; }
+          .dd-logout:hover { background: rgba(244,63,94,.22); border-color: rgba(244,63,94,.35); }
 
           /* Mobile */
           .mobile-toggle {

@@ -1,27 +1,39 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Building2, Save, ArrowLeft, RefreshCcw,
     AtSign, MapPin, Phone, FileText, CheckCircle2,
-    Lock, Eye, EyeOff, ShieldAlert, Zap
+    Lock, Eye, EyeOff, ShieldAlert, Zap, Percent,
+    DollarSign, CalendarClock, Trash2, AlertTriangle, PlusCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getPlan, type PlanFeatures } from "@/lib/plans";
 
-type Tab = "brand" | "security";
+type Tab = "brand" | "security" | "latefees";
 
 export default function SettingsPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<Tab>("brand");
     const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
 
-    const [config, setConfig] = useState({ brand: "", name: "", slogan: "", address: "", phone: "" });
+    const [config, setConfig] = useState({ brand: "", name: "", slogan: "", address: "", phone: "", lateFeeRules: [] as any[] });
     const [loadingBrand, setLoadingBrand] = useState(true);
     const [savingBrand, setSavingBrand] = useState(false);
     const [brandSuccess, setBrandSuccess] = useState(false);
+
+    const [newRule, setNewRule] = useState({
+        limitByAmount: false,
+        minAmount: "0",
+        maxAmount: "",
+        minDays: "1",
+        maxDays: "",
+        type: "percentage" as "percentage" | "fixed",
+        value: "",
+    });
+    const [ruleError, setRuleError] = useState("");
 
     const [passwords, setPasswords] = useState({ current: "", newPass: "", confirm: "" });
     const [showCurrent, setShowCurrent] = useState(false);
@@ -35,7 +47,14 @@ export default function SettingsPage() {
             .then(d => {
                 if (!d.error) {
                     const { bankAccounts: _accs, ...rest } = d;
-                    setConfig(rest);
+                    setConfig({
+                        brand: rest.brand || "",
+                        name: rest.name || "",
+                        slogan: rest.slogan || "",
+                        address: rest.address || "",
+                        phone: rest.phone || "",
+                        lateFeeRules: rest.lateFeeRules || []
+                    });
                 }
             })
             .catch(console.error)
@@ -46,19 +65,33 @@ export default function SettingsPage() {
             .catch(() => {});
     }, []);
 
-    const handleSaveBrand = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const saveConfig = async (updatedConfig: typeof config) => {
         setSavingBrand(true);
         setBrandSuccess(false);
         try {
             const res = await fetch("/api/settings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(config),
+                body: JSON.stringify(updatedConfig),
             });
-            if (res.ok) { setBrandSuccess(true); setTimeout(() => setBrandSuccess(false), 3000); }
-        } catch { alert("Error de conexión"); }
-        finally { setSavingBrand(false); }
+            if (res.ok) {
+                setBrandSuccess(true);
+                setTimeout(() => setBrandSuccess(false), 2500);
+                return true;
+            }
+            setRuleError("No se pudo guardar el cambio. Intenta de nuevo.");
+            return false;
+        } catch {
+            setRuleError("Error de conexión al guardar.");
+            return false;
+        } finally {
+            setSavingBrand(false);
+        }
+    };
+
+    const handleSaveBrand = async (e: React.FormEvent) => {
+        e.preventDefault();
+        await saveConfig(config);
     };
 
     const handleChangePassword = async (e: React.FormEvent) => {
@@ -86,6 +119,72 @@ export default function SettingsPage() {
         finally { setSavingPass(false); }
     };
 
+    const handleAddRule = async () => {
+        setRuleError("");
+
+        const minD = parseInt(newRule.minDays);
+        const maxD = newRule.maxDays ? parseInt(newRule.maxDays) : null;
+        const val = parseFloat(newRule.value);
+        const minA = newRule.limitByAmount ? parseFloat(newRule.minAmount || "0") : 0;
+        const maxA = newRule.limitByAmount && newRule.maxAmount ? parseFloat(newRule.maxAmount) : null;
+
+        if (isNaN(minD) || minD < 1) return setRuleError("El día mínimo es obligatorio y debe ser 1 o mayor.");
+        if (maxD !== null && maxD < minD) return setRuleError("El día máximo debe ser mayor o igual al mínimo.");
+        if (isNaN(val) || val <= 0) return setRuleError("Ingresa un valor de cargo válido.");
+        if (newRule.limitByAmount && isNaN(minA)) return setRuleError("Ingresa un monto mínimo válido.");
+        if (maxA !== null && maxA < minA) return setRuleError("El monto máximo debe ser mayor o igual al mínimo.");
+
+        const rule = {
+            id: Math.random().toString(36).substring(7),
+            minAmount: minA,
+            maxAmount: maxA,
+            minDays: minD,
+            maxDays: maxD,
+            type: newRule.type,
+            value: val,
+        };
+
+        const updatedRules = [...config.lateFeeRules, rule].sort((a, b) => {
+            if (a.minAmount !== b.minAmount) return a.minAmount - b.minAmount;
+            return a.minDays - b.minDays;
+        });
+        const updatedConfig = { ...config, lateFeeRules: updatedRules };
+
+        setConfig(updatedConfig);
+        const saved = await saveConfig(updatedConfig);
+        if (!saved) return; // deja la regla en el formulario para reintentar, no limpiar en error
+
+        setNewRule(r => ({ ...r, minDays: String(maxD ? maxD + 1 : minD + 1), maxDays: "", value: "" }));
+    };
+
+    const handleDeleteRule = async (idx: number) => {
+        const updatedRules = [...config.lateFeeRules];
+        updatedRules.splice(idx, 1);
+        const updatedConfig = { ...config, lateFeeRules: updatedRules };
+
+        setConfig(updatedConfig);
+        await saveConfig(updatedConfig);
+    };
+
+    const rulePreview = useMemo(() => {
+        const val = parseFloat(newRule.value);
+        if (isNaN(val) || val <= 0) return null;
+
+        const dayPart = newRule.maxDays
+            ? `entre ${newRule.minDays} y ${newRule.maxDays} días de atraso`
+            : `a partir de ${newRule.minDays} día${newRule.minDays === "1" ? "" : "s"} de atraso`;
+
+        const amountPart = newRule.limitByAmount
+            ? (newRule.maxAmount
+                ? `de $${Number(newRule.minAmount || 0).toLocaleString()} a $${Number(newRule.maxAmount).toLocaleString()}`
+                : `desde $${Number(newRule.minAmount || 0).toLocaleString()} en adelante`)
+            : "de cualquier monto";
+
+        const chargePart = newRule.type === "percentage" ? `${val}% del valor de la cuota` : `RD$${val.toLocaleString()} fijos`;
+
+        return `Las cuotas de préstamos ${amountPart}, ${dayPart}, generarán ${chargePart} de mora.`;
+    }, [newRule]);
+
     if (loadingBrand) return (
         <div className="state-screen">
             <div className="spinner-pro"></div>
@@ -110,6 +209,9 @@ export default function SettingsPage() {
                 <button className={`stab ${activeTab === "brand" ? "active" : ""}`} onClick={() => setActiveTab("brand")}>
                     <Building2 size={16} /> Identidad de Marca
                     {!plan.hasCustomBranding && <Lock size={12} className="tab-lock-icon" />}
+                </button>
+                <button className={`stab ${activeTab === "latefees" ? "active" : ""}`} onClick={() => setActiveTab("latefees")}>
+                    <ShieldAlert size={16} /> Reglas de Mora
                 </button>
                 <button className={`stab ${activeTab === "security" ? "active" : ""}`} onClick={() => setActiveTab("security")}>
                     <Lock size={16} /> Seguridad
@@ -209,6 +311,133 @@ export default function SettingsPage() {
                         </form>
                     </motion.div>
                 </div>
+            )}
+
+            {activeTab === "latefees" && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card form-card">
+                    <div className="section-header" style={{ marginBottom: "1.5rem" }}>
+                        <ShieldAlert size={18} className="icon-accent" />
+                        <h3>Reglas de Mora (Cargos por Atraso)</h3>
+                    </div>
+                    <p className="preview-hint" style={{ textAlign: "left", marginBottom: "2rem", marginTop: "-0.5rem" }}>
+                        Define tramos de días de atraso y el cargo que se sugiere para cada uno — monto fijo o porcentaje de la cuota.
+                        El sistema evalúa las reglas de la más específica a la más general y aplica la primera que coincida con los días de atraso de la cuota.
+                    </p>
+
+                    {/* Reglas existentes */}
+                    {config.lateFeeRules.length === 0 ? (
+                        <div className="empty-state-list mora-empty">
+                            <div className="empty-icon-box"><ShieldAlert size={28} /></div>
+                            <p>No hay reglas de mora configuradas.</p>
+                            <span>Las cuotas atrasadas no generarán ningún cargo automático hasta que agregues al menos una regla abajo.</span>
+                        </div>
+                    ) : (
+                        <div className="rule-cards-grid">
+                            {config.lateFeeRules.map((rule, idx) => (
+                                <div key={rule.id} className="rule-card">
+                                    <button type="button" className="rule-card-delete" title="Eliminar regla" onClick={() => handleDeleteRule(idx)}>
+                                        <Trash2 size={14} />
+                                    </button>
+                                    <div className="rule-card-days">
+                                        <CalendarClock size={14} />
+                                        <span>{rule.minDays} {rule.maxDays ? `– ${rule.maxDays} días` : 'días en adelante'}</span>
+                                    </div>
+                                    <div className={`rule-card-value ${rule.type}`}>
+                                        {rule.type === 'percentage' ? <Percent size={20} /> : <DollarSign size={20} />}
+                                        <span>{rule.type === 'percentage' ? `${rule.value}%` : `RD$${rule.value.toLocaleString()}`}</span>
+                                    </div>
+                                    <div className="rule-card-amount">
+                                        Préstamos ${rule.minAmount?.toLocaleString()} {rule.maxAmount ? `– $${rule.maxAmount.toLocaleString()}` : 'en adelante'}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Formulario para añadir nueva regla */}
+                    <div className="add-rule-box">
+                        <h4><PlusCircle size={15} /> Añadir Nueva Regla</h4>
+
+                        <div className="rule-inputs rule-inputs-days">
+                            <div className="field-group" style={{ marginBottom: 0 }}>
+                                <label>Día Mínimo de Atraso</label>
+                                <input type="number" className="input-pro" placeholder="Ej: 1" min="1"
+                                    value={newRule.minDays}
+                                    onChange={e => setNewRule(r => ({ ...r, minDays: e.target.value }))} />
+                            </div>
+                            <div className="field-group" style={{ marginBottom: 0 }}>
+                                <label>Día Máximo <span className="label-opt">(vacío = en adelante)</span></label>
+                                <input type="number" className="input-pro" placeholder="Ej: 5" min="1"
+                                    value={newRule.maxDays}
+                                    onChange={e => setNewRule(r => ({ ...r, maxDays: e.target.value }))} />
+                            </div>
+                            <div className="field-group" style={{ marginBottom: 0 }}>
+                                <label>Tipo de Cargo</label>
+                                <select className="input-pro" style={{ height: "46px" }}
+                                    value={newRule.type}
+                                    onChange={e => setNewRule(r => ({ ...r, type: e.target.value as "percentage" | "fixed" }))}>
+                                    <option value="percentage">Porcentaje (%)</option>
+                                    <option value="fixed">Monto Fijo (RD$)</option>
+                                </select>
+                            </div>
+                            <div className="field-group" style={{ marginBottom: 0 }}>
+                                <label>Valor</label>
+                                <input type="number" className="input-pro" placeholder="Ej: 10" step="0.01" min="0.01"
+                                    value={newRule.value}
+                                    onChange={e => setNewRule(r => ({ ...r, value: e.target.value }))} />
+                            </div>
+                        </div>
+
+                        <label className="amount-toggle">
+                            <input type="checkbox" checked={newRule.limitByAmount}
+                                onChange={e => setNewRule(r => ({ ...r, limitByAmount: e.target.checked }))} />
+                            <span>Aplicar solo a un rango específico de monto de préstamo</span>
+                        </label>
+
+                        {newRule.limitByAmount && (
+                            <div className="rule-inputs rule-inputs-amount">
+                                <div className="field-group" style={{ marginBottom: 0 }}>
+                                    <label>Monto Préstamo Mín. ($)</label>
+                                    <input type="number" className="input-pro" placeholder="Ej: 0" min="0"
+                                        value={newRule.minAmount}
+                                        onChange={e => setNewRule(r => ({ ...r, minAmount: e.target.value }))} />
+                                </div>
+                                <div className="field-group" style={{ marginBottom: 0 }}>
+                                    <label>Monto Préstamo Máx. <span className="label-opt">(vacío = en adelante)</span></label>
+                                    <input type="number" className="input-pro" placeholder="Ej: 10000" min="0"
+                                        value={newRule.maxAmount}
+                                        onChange={e => setNewRule(r => ({ ...r, maxAmount: e.target.value }))} />
+                                </div>
+                            </div>
+                        )}
+
+                        {rulePreview && (
+                            <div className="rule-preview-box">
+                                <ShieldAlert size={14} />
+                                <span>{rulePreview}</span>
+                            </div>
+                        )}
+
+                        {ruleError && (
+                            <div className="rule-error-box">
+                                <AlertTriangle size={14} />
+                                <span>{ruleError}</span>
+                            </div>
+                        )}
+
+                        <button type="button" className={`btn-save-pro btn-add-rule ${brandSuccess ? "success" : ""}`} onClick={handleAddRule} disabled={savingBrand}>
+                            {savingBrand ? <RefreshCcw size={16} className="spin" /> : brandSuccess ? <CheckCircle2 size={16} /> : <PlusCircle size={16} />}
+                            <span>{savingBrand ? "Guardando..." : brandSuccess ? "¡Guardada!" : "Añadir Regla"}</span>
+                        </button>
+                    </div>
+
+                    <footer className="form-footer" style={{ marginTop: "2rem" }}>
+                        <button type="button" className={`btn-save-pro ${brandSuccess ? "success" : ""}`} onClick={handleSaveBrand} disabled={savingBrand}>
+                            {savingBrand ? <RefreshCcw size={18} className="spin" /> : brandSuccess ? <CheckCircle2 size={18} /> : <Save size={18} />}
+                            <span>{savingBrand ? "Guardando..." : brandSuccess ? "¡Cambios Guardados!" : "Guardar Reglas"}</span>
+                        </button>
+                    </footer>
+                </motion.div>
             )}
 
             {activeTab === "security" && (
@@ -352,6 +581,39 @@ const SETTINGS_STYLES = `
 .state-screen { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; color: #475569; font-weight: 600; }
 .spinner-pro { width: 44px; height: 44px; border: 4px solid rgba(99,102,241,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
 
+.btn-mini-delete { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-mini-delete:hover { background: rgba(239,68,68,0.2); }
+
+/* Reglas de Mora */
+.empty-state-list.mora-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.6rem; padding: 2.5rem 1.5rem; background: rgba(15,23,42,0.35); border: 1px dashed rgba(255,255,255,0.08); border-radius: 14px; margin-bottom: 1.75rem; }
+.empty-icon-box { width: 56px; height: 56px; border-radius: 14px; background: rgba(99,102,241,0.1); color: #818cf8; display: flex; align-items: center; justify-content: center; margin-bottom: 0.25rem; }
+.mora-empty p { color: #cbd5e1; font-weight: 700; font-size: 0.92rem; margin: 0; }
+.mora-empty span { color: #64748b; font-size: 0.82rem; max-width: 420px; line-height: 1.5; }
+
+.rule-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.9rem; margin-bottom: 1.75rem; }
+.rule-card { position: relative; background: rgba(15,23,42,0.45); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 1.1rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; transition: border-color 0.2s; }
+.rule-card:hover { border-color: rgba(99,102,241,0.3); }
+.rule-card-delete { position: absolute; top: 0.6rem; right: 0.6rem; background: transparent; border: none; color: #475569; cursor: pointer; padding: 0.3rem; border-radius: 6px; transition: all 0.2s; }
+.rule-card-delete:hover { color: #f43f5e; background: rgba(244,63,94,0.1); }
+.rule-card-days { display: flex; align-items: center; gap: 0.45rem; color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.rule-card-value { display: flex; align-items: center; gap: 0.5rem; font-size: 1.4rem; font-weight: 900; color: #f59e0b; }
+.rule-card-value.fixed { color: #34d399; }
+.rule-card-amount { font-size: 0.75rem; color: #64748b; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.05); }
+
+.add-rule-box { background: rgba(15,23,42,0.4); padding: 1.5rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); }
+.add-rule-box h4 { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: white; margin-bottom: 1.25rem; font-weight: 700; }
+.rule-inputs { display: grid; gap: 1rem; align-items: end; }
+.rule-inputs-days { grid-template-columns: 1fr 1fr 1fr 1fr; margin-bottom: 1.1rem; }
+.rule-inputs-amount { grid-template-columns: 1fr 1fr; margin-top: 1.1rem; }
+.label-opt { text-transform: none; font-weight: 500; color: #475569; letter-spacing: 0; }
+
+.amount-toggle { display: flex; align-items: center; gap: 0.6rem; font-size: 0.83rem; color: #94a3b8; cursor: pointer; user-select: none; }
+.amount-toggle input { width: 16px; height: 16px; accent-color: #6366f1; cursor: pointer; }
+
+.rule-preview-box { display: flex; align-items: flex-start; gap: 0.6rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.82rem; line-height: 1.5; padding: 0.8rem 1rem; border-radius: 10px; margin-top: 1.1rem; }
+.rule-error-box { display: flex; align-items: center; gap: 0.6rem; background: rgba(244,63,94,0.08); border: 1px solid rgba(244,63,94,0.2); color: #fca5a5; font-size: 0.82rem; padding: 0.8rem 1rem; border-radius: 10px; margin-top: 1.1rem; }
+.btn-add-rule { width: auto; padding: 0.8rem 1.75rem; margin-top: 1.25rem; }
+
 @media (max-width: 1024px) {
     .settings-grid { grid-template-columns: 1fr; }
     .security-layout { grid-template-columns: 1fr; }
@@ -360,5 +622,7 @@ const SETTINGS_STYLES = `
 @media (max-width: 640px) {
     .header-title { font-size: 1.6rem; }
     .form-card { padding: 1.5rem; }
+    .rule-inputs-days, .rule-inputs-amount { grid-template-columns: 1fr 1fr; }
+    .rule-cards-grid { grid-template-columns: 1fr 1fr; }
 }
 `;
