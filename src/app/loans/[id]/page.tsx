@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { generateLoanReceipt, generatePaymentReceipt, generateAccountStatement, getPaymentReceiptDetails, CompanyConfig } from "@/lib/pdf-generator";
-import { getPlan, type PlanFeatures } from "@/lib/plans";
+import { useUserPlan } from "@/components/UserPlanProvider";
 import { Lock, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -36,7 +36,7 @@ export default function LoanDetailsPage() {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
-    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
+    const { plan } = useUserPlan();
     const [viewingPayment, setViewingPayment] = useState<any>(null);
 
     const [paymentForm, setPaymentForm] = useState({
@@ -78,10 +78,6 @@ export default function LoanDetailsPage() {
 
     useEffect(() => {
         if (params.id) { fetchLoanData(); fetchCompanyConfig(); }
-        fetch("/api/me")
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
-            .catch(() => {});
     }, [params.id]);
 
     const handlePayment = async (e: React.FormEvent) => {
@@ -1085,7 +1081,7 @@ export default function LoanDetailsPage() {
         .modal-footer-pro { display: flex; gap: 1rem; margin-top: 2rem; }
         .btn-cancel-pro { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 1rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .btn-cancel-pro:hover { background: rgba(var(--edge-rgb), 0.03); color: var(--text-main); }
-        .btn-confirm-pro { flex: 2; background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 16px -4px rgba(99,102,241,0.4); }
+        .btn-confirm-pro { flex: 2; display: flex; align-items: center; justify-content: center; gap: 0.5rem; white-space: nowrap; background: var(--primary); color: white; border: none; padding: 1rem; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 16px -4px rgba(99,102,241,0.4); }
         .btn-confirm-pro:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
         .btn-confirm-pro:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -1160,6 +1156,8 @@ export default function LoanDetailsPage() {
           .btn-pay-pro, .btn-download-pro { width: 100%; justify-content: center; }
           .modal-content-premium { padding: 1.5rem; }
           .form-row-modal { grid-template-columns: 1fr; }
+          .modal-footer-pro { flex-direction: column-reverse; }
+          .btn-cancel-pro, .btn-confirm-pro { flex: none; width: 100%; }
         }
       `}} />
         </div>

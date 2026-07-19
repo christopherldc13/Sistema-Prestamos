@@ -19,13 +19,13 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { getPlan, type PlanFeatures } from "@/lib/plans";
+import { useUserPlan } from "@/components/UserPlanProvider";
 
 export default function ReportsPage() {
     const router = useRouter();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
+    const { plan } = useUserPlan();
 
     const fetchReports = async () => {
         setLoading(true);
@@ -42,10 +42,6 @@ export default function ReportsPage() {
 
     useEffect(() => {
         fetchReports();
-        fetch("/api/me")
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
-            .catch(() => {});
     }, []);
 
     if (loading && !data) {

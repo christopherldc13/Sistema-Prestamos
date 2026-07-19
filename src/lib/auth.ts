@@ -1,10 +1,17 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
     providers: [
+        ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
+            GoogleProvider({
+                clientId: process.env.GOOGLE_CLIENT_ID,
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            })
+        ] : []),
         CredentialsProvider({
             name: "Credentials",
             credentials: {
@@ -51,6 +58,24 @@ export const authOptions: NextAuthOptions = {
         })
     ],
     callbacks: {
+        async signIn({ user, account }) {
+            if (account?.provider === "google") {
+                if (!user.email) return false;
+
+                const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+
+                // Solo se permite iniciar sesión con Google si el correo ya existe como usuario
+                // (las cuentas se crean manualmente desde el Panel Maestro) — evita autoregistro abierto.
+                if (!dbUser) return "/login?error=NoAccount";
+                if (dbUser.isActive === false) return "/login?error=Suspended";
+
+                // Enriquecemos el objeto `user` con los datos de nuestra propia tabla para que
+                // el callback jwt (idéntico al del flujo de credenciales) los recoja normalmente.
+                (user as any).id = dbUser.id;
+                (user as any).role = dbUser.role;
+            }
+            return true;
+        },
         async jwt({ token, user }) {
             if (user) {
                 token.role = (user as any).role;

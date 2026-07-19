@@ -381,7 +381,7 @@ export default function ClientDetailsPage() {
                 .info-item svg { flex-shrink: 0; margin-top: 0.15rem; }
                 .info-item > div { min-width: 0; flex: 1; }
                 .info-item label { display: block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); }
-                .info-item p { color: var(--text-main); font-weight: 500; font-size: 0.95rem; overflow-wrap: anywhere; word-break: break-word; }
+                .info-item p { color: var(--text-main); font-weight: 500; font-size: 0.95rem; word-break: break-all; }
 
                 .client-stats-mini { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 1rem; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid rgba(var(--edge-rgb), 0.05); }
                 .mini-stat { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -421,6 +421,12 @@ export default function ClientDetailsPage() {
                   .details-grid { grid-template-columns: 1fr; }
                   .profile-section { position: relative; }
                   .loan-item-details { grid-template-columns: 1fr 1fr; gap: 1rem; }
+                }
+                @media (max-width: 640px) {
+                  .details-header { flex-direction: column; align-items: stretch; gap: 0.75rem; margin-bottom: 1.5rem; }
+                  .btn-icon-back { align-self: flex-start; }
+                  .header-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; width: 100%; }
+                  .btn-edit-pro, .btn-add-loan-pro { width: 100%; justify-content: center; padding: 0.75rem 0.5rem; font-size: 0.85rem; white-space: nowrap; }
                 }
                 @media (max-width: 480px) {
                    .loan-item-footer { flex-direction: column; align-items: flex-start; gap: 1rem; }

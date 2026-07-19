@@ -39,6 +39,8 @@ model Client {
   loans       Loan[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Loan {
@@ -63,6 +65,9 @@ model Loan {
   payments          Payment[]
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([clientId])
 }
 
 model Payment {
@@ -76,6 +81,8 @@ model Payment {
   loan          Loan     @relation(fields: [loanId], references: [id])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([loanId])
 }
 
 model Settings {

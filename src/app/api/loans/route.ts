@@ -14,11 +14,25 @@ export async function GET() {
 
         const userId = (session.user as any).id;
 
+        // select en vez de include: solo se traen los campos que el listado realmente
+        // muestra + lo mínimo necesario para calcular la mora (evita mandar al cliente
+        // el cronograma completo y el historial de pagos de cada préstamo)
         const loans = await prisma.loan.findMany({
             where: { userId },
-            include: {
-                client: true,
-                payments: true,
+            select: {
+                id: true,
+                amount: true,
+                term: true,
+                termUnit: true,
+                status: true,
+                totalToPay: true,
+                remainingBalance: true,
+                installmentAmount: true,
+                dueDate: true,
+                createdAt: true,
+                paymentSchedule: true,
+                client: { select: { id: true, fullName: true } },
+                payments: { select: { amount: true, lateFeeAmount: true } },
             },
             orderBy: {
                 createdAt: "desc",
@@ -29,27 +43,33 @@ export async function GET() {
         const lateFeeRules = (settings?.value as any)?.lateFeeRules || [];
 
         const updates: Promise<any>[] = [];
-        for (const loan of loans) {
-            const loanAny = loan as any;
-            if (loan.status === "paid") continue;
+        const result = loans.map((loan) => {
+            const { paymentSchedule, payments, ...rest } = loan as any;
+            let status = loan.status;
+            let accumulatedLateFee = 0;
+            let daysOverdue = 0;
 
-            const schedule = (loan.paymentSchedule as any[]) || [];
-            const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
-            const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
+            if (status !== "paid") {
+                const schedule = (paymentSchedule as any[]) || [];
+                const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
+                const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
 
-            if (loan.status !== newStatus) {
-                updates.push(
-                    prisma.loan.update({ where: { id: loan.id }, data: { status: newStatus } })
-                );
-                loan.status = newStatus;
+                if (status !== newStatus) {
+                    updates.push(
+                        prisma.loan.update({ where: { id: loan.id }, data: { status: newStatus } })
+                    );
+                    status = newStatus;
+                }
+
+                daysOverdue = overdueInfo.daysOverdue;
+                accumulatedLateFee = overdueInfo.isOverdue ? overdueInfo.lateFee : 0;
             }
 
-            loanAny.daysOverdue = overdueInfo.daysOverdue;
-            loanAny.accumulatedLateFee = overdueInfo.isOverdue ? overdueInfo.lateFee : 0;
-        }
+            return { ...rest, status, daysOverdue, accumulatedLateFee };
+        });
         if (updates.length > 0) await Promise.all(updates);
 
-        return NextResponse.json(loans);
+        return NextResponse.json(result);
     } catch (error) {
         return NextResponse.json({ error: "Error al obtener préstamos" }, { status: 500 });
     }

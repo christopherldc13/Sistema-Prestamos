@@ -9,8 +9,8 @@ import {
   ShieldAlert, ShieldCheck, Zap, ChevronDown, ChevronRight,
   Sun, Moon
 } from "lucide-react";
-import { getPlan, type PlanId } from "@/lib/plans";
 import { useTheme } from "@/components/ThemeProvider";
+import { useUserPlan } from "@/components/UserPlanProvider";
 
 function getLicenseInfo(expiresAt: string | null) {
   if (!expiresAt) return null;
@@ -25,24 +25,12 @@ function getLicenseInfo(expiresAt: string | null) {
 export function Navbar() {
   const { data: session } = useSession();
   const { theme, toggleTheme } = useTheme();
+  const { plan: userPlan, licenseExpiresAt } = useUserPlan();
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [licenseExpiresAt, setLicenseExpiresAt] = useState<string | null>(null);
-  const [subscriptionPlan, setSubscriptionPlan] = useState<PlanId>("basic");
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = session && (session.user as any)?.role === "admin";
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    fetch("/api/me")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.licenseExpiresAt) setLicenseExpiresAt(d.licenseExpiresAt);
-        if (d?.subscriptionPlan) setSubscriptionPlan(d.subscriptionPlan as PlanId);
-      })
-      .catch(() => {});
-  }, [isAdmin]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -54,7 +42,7 @@ export function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const plan = isAdmin ? getPlan(subscriptionPlan) : null;
+  const plan = isAdmin ? userPlan : null;
 
   if (!session) return null;
 

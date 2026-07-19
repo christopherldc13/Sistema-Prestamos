@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,7 @@ import {
   BarChart3, FileText, Palette, ArrowRight, Crown, Download, Table2, History
 } from "lucide-react";
 import { PLANS, formatLimit, type PlanId } from "@/lib/plans";
+import { useUserPlan } from "@/components/UserPlanProvider";
 
 const PLAN_ORDER: PlanId[] = ["basic", "intermediate", "premium"];
 
@@ -26,17 +27,8 @@ const FEATURE_ROWS = [
 
 export default function PlansPage() {
   const router = useRouter();
-  const [currentPlan, setCurrentPlan] = useState<string>("basic");
-  const [loading, setLoading] = useState(true);
+  const { subscriptionPlan: currentPlan, loading } = useUserPlan();
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
-
-  useEffect(() => {
-    fetch("/api/me")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.subscriptionPlan) setCurrentPlan(d.subscriptionPlan); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   const planIcons: Record<PlanId, React.ReactNode> = {
     basic: <Shield size={28} />,

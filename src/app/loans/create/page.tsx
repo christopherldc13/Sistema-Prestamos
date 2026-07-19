@@ -15,7 +15,7 @@ import {
     type TermUnit,
     type InterestType,
 } from "@/lib/loan-calculator";
-import { getPlan, type PlanFeatures } from "@/lib/plans";
+import { useUserPlan } from "@/components/UserPlanProvider";
 
 const RATE_FREQ_LABELS: Record<RateFrequency, string> = {
     daily: "Diaria",
@@ -37,7 +37,7 @@ export default function CreateLoanPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSchedule, setShowSchedule] = useState(false);
-    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
+    const { plan } = useUserPlan();
 
     const [formData, setFormData] = useState({
         clientId: "",
@@ -56,10 +56,6 @@ export default function CreateLoanPage() {
             .then(d => { if (Array.isArray(d)) setClients(d); })
             .catch(console.error)
             .finally(() => setLoading(false));
-        fetch("/api/me")
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
-            .catch(() => {});
     }, []);
 
     const calc = useMemo(() => {

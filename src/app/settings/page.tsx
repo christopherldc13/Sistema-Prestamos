@@ -10,14 +10,14 @@ import {
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getPlan, type PlanFeatures } from "@/lib/plans";
+import { useUserPlan } from "@/components/UserPlanProvider";
 
 type Tab = "brand" | "security" | "latefees";
 
 export default function SettingsPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<Tab>("brand");
-    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
+    const { plan } = useUserPlan();
 
     const [config, setConfig] = useState({ brand: "", name: "", slogan: "", address: "", phone: "", lateFeeRules: [] as any[] });
     const [loadingBrand, setLoadingBrand] = useState(true);
@@ -60,10 +60,6 @@ export default function SettingsPage() {
             })
             .catch(console.error)
             .finally(() => setLoadingBrand(false));
-        fetch("/api/me")
-            .then(r => r.ok ? r.json() : null)
-            .then(d => { if (d?.subscriptionPlan) setPlan(getPlan(d.subscriptionPlan)); })
-            .catch(() => {});
     }, []);
 
     const saveConfig = async (updatedConfig: typeof config) => {
@@ -560,8 +556,9 @@ const SETTINGS_STYLES = `
 .header-subtitle { color: var(--text-dim); font-size: 0.95rem; }
 
 /* Tabs */
-.settings-tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(var(--edge-rgb), 0.06); padding-bottom: 1px; }
-.stab { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: none; color: var(--text-dim); padding: 0.75rem 1.25rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; }
+.settings-tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(var(--edge-rgb), 0.06); padding-bottom: 1px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.settings-tabs::-webkit-scrollbar { display: none; }
+.stab { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: none; color: var(--text-dim); padding: 0.75rem 1.25rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
 .stab:hover { color: var(--text-main); }
 .stab.active { color: #6366f1; border-bottom-color: #6366f1; }
 .tab-lock-icon { color: #f59e0b; margin-left: 0.25rem; }
@@ -641,7 +638,7 @@ const SETTINGS_STYLES = `
 .rule-card-edit, .rule-card-delete { background: transparent; border: none; color: var(--text-faint); cursor: pointer; padding: 0.3rem; border-radius: 6px; transition: all 0.2s; }
 .rule-card-edit:hover { color: #818cf8; background: rgba(99,102,241,0.1); }
 .rule-card-delete:hover { color: #f43f5e; background: rgba(244,63,94,0.1); }
-.rule-card-days { display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.rule-card-days { display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding-right: 3.25rem; }
 .rule-card-value { display: flex; align-items: center; gap: 0.5rem; font-size: 1.4rem; font-weight: 900; color: #f59e0b; }
 .rule-card-value.fixed { color: #34d399; }
 .rule-card-amount { font-size: 0.75rem; color: var(--text-dim); padding-top: 0.4rem; border-top: 1px solid rgba(var(--edge-rgb), 0.05); }
@@ -673,6 +670,7 @@ const SETTINGS_STYLES = `
     .header-title { font-size: 1.6rem; }
     .form-card { padding: 1.5rem; }
     .rule-inputs-days, .rule-inputs-amount { grid-template-columns: 1fr 1fr; }
-    .rule-cards-grid { grid-template-columns: 1fr 1fr; }
+    .rule-cards-grid { grid-template-columns: 1fr; }
+    .stab { padding: 0.65rem 0.9rem; font-size: 0.82rem; gap: 0.35rem; }
 }
 `;
