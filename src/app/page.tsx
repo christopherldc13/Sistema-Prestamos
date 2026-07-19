@@ -147,7 +147,7 @@ export default function Home() {
       >
         <MetricItem icon={<CheckCircle2 size={14} />} label="Pagados" value={stats.paidLoans} color="#10b981" />
         <div className="metric-sep" />
-        <MetricItem icon={<AlertTriangle size={14} />} label="En retraso" value={stats.overdueLoans} color={stats.overdueLoans > 0 ? "#f59e0b" : "#475569"} />
+        <MetricItem icon={<AlertTriangle size={14} />} label="En retraso" value={stats.overdueLoans} color={stats.overdueLoans > 0 ? "#f59e0b" : "var(--text-faint)"} />
         <div className="metric-sep" />
         <MetricItem icon={<HeartHandshake size={14} />} label="Activos" value={stats.activeLoans} color="#6366f1" />
         <div className="metric-sep" />
@@ -193,8 +193,8 @@ export default function Home() {
         {/* Vencidos */}
         <motion.div className="glass-card feed-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62 }}>
           <div className="feed-header">
-            <div className="feed-title" style={{ color: stats.overdueList?.length > 0 ? "#fbbf24" : "white" }}>
-              <CalendarX size={16} color={stats.overdueList?.length > 0 ? "#fbbf24" : "#475569"} />
+            <div className="feed-title" style={{ color: stats.overdueList?.length > 0 ? "#fbbf24" : "var(--text-main)" }}>
+              <CalendarX size={16} color={stats.overdueList?.length > 0 ? "#fbbf24" : "var(--text-faint)"} />
               Préstamos Vencidos
               {stats.overdueList?.length > 0 && (
                 <span className="overdue-pill">{stats.overdueList.length}</span>
@@ -278,7 +278,7 @@ export default function Home() {
           position: relative; z-index: 1;
           display: flex; justify-content: space-between; align-items: flex-end;
           padding-bottom: 1.5rem;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
+          border-bottom: 1px solid rgba(var(--edge-rgb), 0.05);
         }
         .greeting-label {
           font-size: 0.8rem;
@@ -291,14 +291,14 @@ export default function Home() {
         .welcome-text {
           font-size: 2.4rem;
           font-weight: 800;
-          color: #f8fafc;
+          color: var(--text-main);
           letter-spacing: -0.03em;
           line-height: 1.1;
           margin-bottom: 0.35rem;
         }
         .welcome-sub {
           font-size: 0.875rem;
-          color: #475569;
+          color: var(--text-faint);
           font-weight: 400;
         }
         .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; }
@@ -325,7 +325,7 @@ export default function Home() {
         }
         .date-text {
           font-size: 0.72rem;
-          color: #334155;
+          color: var(--text-very-faint);
           text-transform: capitalize;
           letter-spacing: 0.01em;
         }
@@ -339,8 +339,8 @@ export default function Home() {
         }
         .stat-card {
           position: relative;
-          background: rgba(15,23,42,0.6);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: var(--bg-surface-6);
+          border: 1px solid rgba(var(--edge-rgb), 0.06);
           border-radius: 16px;
           padding: 1.5rem 1.6rem 1.35rem;
           overflow: hidden;
@@ -350,7 +350,7 @@ export default function Home() {
         .stat-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 20px 48px rgba(0,0,0,0.35);
-          border-color: rgba(255,255,255,0.1);
+          border-color: rgba(var(--edge-rgb), 0.1);
         }
         .stat-bar {
           position: absolute; top: 0; left: 0; right: 0; height: 2px;
@@ -364,7 +364,7 @@ export default function Home() {
         .stat-label {
           font-size: 0.7rem;
           font-weight: 700;
-          color: #64748b;
+          color: var(--text-dim);
           text-transform: uppercase;
           letter-spacing: 0.09em;
         }
@@ -379,7 +379,7 @@ export default function Home() {
         .stat-val {
           font-size: 1.95rem;
           font-weight: 800;
-          color: #f8fafc;
+          color: var(--text-main);
           letter-spacing: -0.03em;
           line-height: 1;
           margin-bottom: 0.6rem;
@@ -387,7 +387,7 @@ export default function Home() {
         }
         .stat-val-skeleton {
           height: 1.95rem; width: 55%;
-          background: rgba(255,255,255,0.06);
+          background: rgba(var(--edge-rgb), 0.06);
           border-radius: 6px;
           margin-bottom: 0.6rem;
           animation: shimmer 1.5s ease infinite;
@@ -411,13 +411,13 @@ export default function Home() {
           flex: 1; justify-content: center;
         }
         .metric-label {
-          font-size: 0.78rem; color: #475569; font-weight: 500;
+          font-size: 0.78rem; color: var(--text-faint); font-weight: 500;
         }
         .metric-value {
           font-size: 0.88rem; font-weight: 700;
           font-variant-numeric: tabular-nums;
         }
-        .metric-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.06); margin: 0 0.25rem; }
+        .metric-sep { width: 1px; height: 24px; background: rgba(var(--edge-rgb), 0.06); margin: 0 0.25rem; }
 
         /* ── Bottom Grid ── */
         .bottom-grid {
@@ -431,7 +431,7 @@ export default function Home() {
         }
         .feed-title {
           display: flex; align-items: center; gap: 0.55rem;
-          font-size: 0.9rem; font-weight: 700; color: white;
+          font-size: 0.9rem; font-weight: 700; color: var(--text-main);
           letter-spacing: -0.01em;
         }
         .feed-link {
@@ -450,8 +450,8 @@ export default function Home() {
           display: flex; align-items: center; gap: 0.85rem;
           padding: 0.7rem 0.85rem;
           border-radius: 10px;
-          background: rgba(255,255,255,0.018);
-          border: 1px solid rgba(255,255,255,0.04);
+          background: rgba(var(--edge-rgb), 0.018);
+          border: 1px solid rgba(var(--edge-rgb), 0.04);
           text-decoration: none;
           transition: all 0.18s;
         }
@@ -471,16 +471,16 @@ export default function Home() {
         .dot-overdue { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
         .feed-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.08rem; }
         .feed-name {
-          font-size: 0.85rem; font-weight: 600; color: #e2e8f0;
+          font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .feed-time { font-size: 0.72rem; color: #475569; }
+        .feed-time { font-size: 0.72rem; color: var(--text-faint); }
         .feed-right {
           display: flex; flex-direction: column; align-items: flex-end; gap: 0.08rem;
           flex-shrink: 0;
         }
         .feed-amount {
-          font-size: 0.88rem; font-weight: 700; color: #f8fafc;
+          font-size: 0.88rem; font-weight: 700; color: var(--text-main);
           font-variant-numeric: tabular-nums;
         }
         .feed-badge {
@@ -492,7 +492,7 @@ export default function Home() {
         .badge-overdue { background: rgba(245,158,11,0.12); color: #fbbf24; }
         .feed-empty {
           text-align: center; padding: 2.5rem 1rem;
-          color: #334155; font-size: 0.85rem;
+          color: var(--text-very-faint); font-size: 0.85rem;
         }
         .feed-empty-ok {
           display: flex; flex-direction: column; align-items: center;
@@ -501,7 +501,7 @@ export default function Home() {
         .skeleton-list { display: flex; flex-direction: column; gap: 0.4rem; }
         .skeleton-row {
           height: 50px;
-          background: rgba(255,255,255,0.04);
+          background: rgba(var(--edge-rgb), 0.04);
           border-radius: 10px;
           animation: shimmer 1.5s ease infinite;
         }
@@ -513,7 +513,7 @@ export default function Home() {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.1em;
-          color: #475569;
+          color: var(--text-faint);
           margin-bottom: 0.9rem;
           display: flex; align-items: center; gap: 0.6rem;
         }
@@ -531,7 +531,7 @@ export default function Home() {
         .quick-item {
           display: flex; align-items: center; gap: 0.85rem;
           padding: 1rem 1.1rem;
-          border: 1px solid rgba(255,255,255,0.05);
+          border: 1px solid rgba(var(--edge-rgb), 0.05);
           text-decoration: none;
           transition: all 0.2s ease;
           cursor: pointer;
@@ -550,15 +550,15 @@ export default function Home() {
         }
         .quick-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
         .quick-title {
-          font-size: 0.82rem; font-weight: 700; color: #e2e8f0;
+          font-size: 0.82rem; font-weight: 700; color: var(--text-secondary);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .quick-desc {
-          font-size: 0.7rem; color: #475569;
+          font-size: 0.7rem; color: var(--text-faint);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .quick-arrow {
-          color: #334155; flex-shrink: 0;
+          color: var(--text-very-faint); flex-shrink: 0;
           transition: transform 0.18s, color 0.18s;
         }
         .quick-item:hover .quick-arrow { transform: translateX(3px); color: #6366f1; }
@@ -644,7 +644,7 @@ function StatCard({ title, value, icon, sub, subOk, gradient, loading }: any) {
         ? <div className="stat-val-skeleton" />
         : <div className="stat-val">{value}</div>
       }
-      <div className="stat-sub" style={{ color: subOk === true ? "#10b981" : subOk === false ? "#f59e0b" : "#475569" }}>
+      <div className="stat-sub" style={{ color: subOk === true ? "#10b981" : subOk === false ? "#f59e0b" : "var(--text-faint)" }}>
         {subOk === true  && <CheckCircle2 size={11} />}
         {subOk === false && <AlertTriangle size={11} />}
         {sub}
@@ -658,7 +658,7 @@ function MetricItem({ icon, label, value, color, highlight }: any) {
     <div className="metric-item">
       <span style={{ color, display: "flex" }}>{icon}</span>
       <span className="metric-label">{label}:</span>
-      <span className="metric-value" style={{ color: highlight ? color : "#f8fafc" }}>{value}</span>
+      <span className="metric-value" style={{ color: highlight ? color : "var(--text-main)" }}>{value}</span>
     </div>
   );
 }

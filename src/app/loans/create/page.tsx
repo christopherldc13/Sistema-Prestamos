@@ -409,7 +409,7 @@ export default function CreateLoanPage() {
                             </div>
                         ) : (
                             <div className="empty-calc">
-                                <AlertCircle size={32} color="#334155" />
+                                <AlertCircle size={32} color="var(--text-very-faint)" />
                                 <p>Ingresa el monto del capital para ver la proyección</p>
                             </div>
                         )}
@@ -425,51 +425,51 @@ export default function CreateLoanPage() {
             <style dangerouslySetInnerHTML={{
                 __html: `
         .loan-create-wrapper { width: 100%; max-width: 1300px; margin: 0 auto; padding-bottom: 5rem; }
-        .btn-back-soft { display: inline-flex; align-items: center; gap: 0.5rem; color: #64748b; font-size: 0.85rem; font-weight: 600; text-decoration: none; margin-bottom: 1.5rem; transition: color 0.2s; }
-        .btn-back-soft:hover { color: white; }
+        .btn-back-soft { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; text-decoration: none; margin-bottom: 1.5rem; transition: color 0.2s; }
+        .btn-back-soft:hover { color: var(--text-main); }
 
-        .loan-create-header { margin-bottom: 2.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1.5rem; }
-        .title-pro { font-size: 2.25rem; font-weight: 800; color: white; letter-spacing: -0.02em; }
-        .subtitle-pro { color: #64748b; font-size: 0.95rem; margin-top: 0.25rem; }
+        .loan-create-header { margin-bottom: 2.5rem; border-bottom: 1px solid rgba(var(--edge-rgb), 0.05); padding-bottom: 1.5rem; }
+        .title-pro { font-size: 2.25rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; }
+        .subtitle-pro { color: var(--text-dim); font-size: 0.95rem; margin-top: 0.25rem; }
 
         .loan-create-grid { display: grid; grid-template-columns: 1fr 440px; gap: 2.5rem; align-items: start; }
 
         .config-form-card { padding: 2.5rem; }
-        .section-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.1em; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-subtitle { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--text-faint); letter-spacing: 0.1em; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
         .form-section-block { margin-bottom: 2.5rem; position: relative; }
-        .form-section-block:not(:last-child):after { content: ''; position: absolute; bottom: -1.25rem; left: 0; width: 100%; height: 1px; background: rgba(255,255,255,0.03); }
+        .form-section-block:not(:last-child):after { content: ''; position: absolute; bottom: -1.25rem; left: 0; width: 100%; height: 1px; background: rgba(var(--edge-rgb), 0.03); }
 
         .field-group-pro { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
-        .field-group-pro label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; color: #94a3b8; }
+        .field-group-pro label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
 
         .select-wrapper { position: relative; width: 100%; }
-        .select-pro-input { width: 100%; background: rgba(15,23,42,0.4); border: 1px solid var(--border); color: white; padding: 1rem 1.25rem; border-radius: 12px; outline: none; appearance: none; font-size: 1rem; transition: border-color 0.2s; }
+        .select-pro-input { width: 100%; background: var(--bg-surface-4); border: 1px solid var(--border); color: var(--text-main); padding: 1rem 1.25rem; border-radius: 12px; outline: none; appearance: none; font-size: 1rem; transition: border-color 0.2s; }
         .select-pro-input:focus { border-color: var(--primary); }
-        .select-pro-input option { background: #0f172a; }
-        .chevron-down-abs { position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%) rotate(-90deg); color: #475569; pointer-events: none; }
+        .select-pro-input option { background: var(--bg-page); }
+        .chevron-down-abs { position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%) rotate(-90deg); color: var(--text-faint); pointer-events: none; }
 
         .form-row-adaptive { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 
         .input-with-symbol { position: relative; width: 100%; }
-        .input-with-symbol .symbol { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: #475569; font-weight: 700; }
+        .input-with-symbol .symbol { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-faint); font-weight: 700; }
         .input-with-symbol .input-pro-text { padding-left: 2.5rem; }
 
-        .input-pro-text { width: 100%; background: rgba(15,23,42,0.4); border: 1px solid var(--border); color: white; padding: 1rem 1.25rem; border-radius: 12px; outline: none; font-size: 1rem; transition: border-color 0.2s; }
+        .input-pro-text { width: 100%; background: var(--bg-surface-4); border: 1px solid var(--border); color: var(--text-main); padding: 1rem 1.25rem; border-radius: 12px; outline: none; font-size: 1rem; transition: border-color 0.2s; }
         .input-pro-text:focus { border-color: var(--primary); }
 
-        .split-input-group { display: flex; background: rgba(15,23,42,0.4); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .split-input-group { display: flex; background: var(--bg-surface-4); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
         .split-input-group .input-pro-text { border: none; width: 55%; background: transparent; }
-        .select-pro-unit { background: rgba(255,255,255,0.03); border: none; color: #94a3b8; font-weight: 700; width: 45%; outline: none; text-align: center; border-left: 1px solid var(--border); cursor: pointer; font-size: 0.8rem; }
+        .select-pro-unit { background: rgba(var(--edge-rgb), 0.03); border: none; color: var(--text-muted); font-weight: 700; width: 45%; outline: none; text-align: center; border-left: 1px solid var(--border); cursor: pointer; font-size: 0.8rem; }
 
-        .segmented-control { display: flex; background: rgba(15,23,42,0.6); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 0.75rem; }
-        .segment-btn { flex: 1; border: none; background: transparent; color: #64748b; padding: 0.75rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+        .segmented-control { display: flex; background: var(--bg-surface-6); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 0.75rem; }
+        .segment-btn { flex: 1; border: none; background: transparent; color: var(--text-dim); padding: 0.75rem; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
         .segment-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
-        .segment-btn-locked { color: #4b5563 !important; cursor: pointer; border: 1px dashed rgba(245,158,11,0.25) !important; }
+        .segment-btn-locked { color: var(--text-faint) !important; cursor: pointer; border: 1px dashed rgba(245,158,11,0.25) !important; }
         .segment-btn-locked:hover { background: rgba(245,158,11,0.08) !important; color: #fbbf24 !important; }
         .seg-lock-badge { background: rgba(245,158,11,0.15); color: #f59e0b; padding: 0.1rem 0.45rem; border-radius: 99px; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.03em; }
-        .btn-toggle-locked { color: #4b5563 !important; border-color: rgba(245,158,11,0.25) !important; }
+        .btn-toggle-locked { color: var(--text-faint) !important; border-color: rgba(245,158,11,0.25) !important; }
         .btn-toggle-locked:hover { color: #fbbf24 !important; border-color: rgba(245,158,11,0.5) !important; background: rgba(245,158,11,0.06) !important; }
-        .method-hint { font-size: 0.8rem; color: #475569; line-height: 1.5; padding-left: 0.5rem; }
+        .method-hint { font-size: 0.8rem; color: var(--text-faint); line-height: 1.5; padding-left: 0.5rem; }
 
         .btn-submit-loan { width: 100%; background: #6366f1; color: white; border: none; padding: 1.25rem; border-radius: 14px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.75rem; cursor: pointer; transition: all 0.3s; margin-top: 1rem; box-shadow: 0 10px 20px -5px rgba(99,102,241,0.4); }
         .btn-submit-loan:hover:not(:disabled) { background: #4f46e5; transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(99,102,241,0.5); }
@@ -479,50 +479,50 @@ export default function CreateLoanPage() {
         .summary-card-pro { padding: 2rem; position: sticky; top: 1rem; }
         .summary-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
         .icon-badge { width: 40px; height: 40px; border-radius: 10px; background: rgba(99,102,241,0.1); color: #6366f1; display: flex; align-items: center; justify-content: center; }
-        .summary-header h3 { font-size: 1.15rem; font-weight: 800; color: white; }
+        .summary-header h3 { font-size: 1.15rem; font-weight: 800; color: var(--text-main); }
 
         .projection-body { display: flex; flex-direction: column; gap: 1.25rem; }
         .proj-item { display: flex; justify-content: space-between; align-items: center; }
-        .p-label { color: #64748b; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
-        .p-value { color: #f8fafc; font-weight: 700; font-size: 1.1rem; }
+        .p-label { color: var(--text-dim); font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .p-value { color: var(--text-main); font-weight: 700; font-size: 1.1rem; }
         .highlight-gold { color: #f59e0b; }
-        .proj-divider { height: 1px; background: rgba(255,255,255,0.05); }
+        .proj-divider { height: 1px; background: rgba(var(--edge-rgb), 0.05); }
 
         .total-focus { background: rgba(99,102,241,0.03); padding: 1rem; border-radius: 12px; margin: 0 -0.5rem; }
-        .total-focus .p-label { color: #cbd5e1; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; }
+        .total-focus .p-label { color: var(--text-tertiary); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; }
         .p-value-total { color: #6366f1; font-size: 2rem; font-weight: 900; }
 
         .suggested-box { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.02)); padding: 1.25rem; border-radius: 14px; border: 1px solid rgba(16,185,129,0.1); }
         .suggest-header { font-size: 0.7rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
-        .suggest-val { font-size: 2rem; font-weight: 900; color: white; display: flex; align-items: baseline; gap: 0.25rem; }
+        .suggest-val { font-size: 2rem; font-weight: 900; color: var(--text-main); display: flex; align-items: baseline; gap: 0.25rem; }
         .suggest-val .cur { font-size: 1.1rem; color: #10b981; }
-        .suggest-val .per { font-size: 0.85rem; color: #475569; font-weight: 700; }
+        .suggest-val .per { font-size: 0.85rem; color: var(--text-faint); font-weight: 700; }
 
-        .calculation-formula-box { background: rgba(255,255,255,0.02); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; border: 1px dashed rgba(255,255,255,0.08); }
-        .formula-label { font-size: 0.65rem; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
-        .formula-text { font-size: 0.75rem; color: #94a3b8; font-family: monospace; }
+        .calculation-formula-box { background: rgba(var(--edge-rgb), 0.02); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; border: 1px dashed rgba(var(--edge-rgb), 0.08); }
+        .formula-label { font-size: 0.65rem; color: var(--text-dim); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+        .formula-text { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
 
-        .due-date-box { display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.02); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); color: #64748b; font-size: 0.85rem; }
+        .due-date-box { display: flex; align-items: center; gap: 0.75rem; background: rgba(var(--edge-rgb), 0.02); padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(var(--edge-rgb), 0.05); color: var(--text-dim); font-size: 0.85rem; }
         .due-date-box > div { display: flex; flex-direction: column; gap: 0.1rem; }
         .due-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
-        .due-val { color: #cbd5e1; font-weight: 700; font-size: 0.9rem; }
+        .due-val { color: var(--text-tertiary); font-weight: 700; font-size: 0.9rem; }
 
         .btn-toggle-schedule { width: 100%; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.15); color: #818cf8; padding: 0.75rem; border-radius: 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; }
         .btn-toggle-schedule:hover { background: rgba(99,102,241,0.12); }
 
-        .schedule-table-wrapper { overflow: hidden; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); max-height: 320px; overflow-y: auto; }
+        .schedule-table-wrapper { overflow: hidden; border-radius: 10px; border: 1px solid rgba(var(--edge-rgb), 0.05); max-height: 320px; overflow-y: auto; }
         .schedule-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
-        .schedule-table th { background: rgba(15,23,42,0.6); padding: 0.6rem 0.5rem; text-align: left; color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; }
-        .schedule-table td { padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: #94a3b8; }
-        .schedule-table tr:hover td { background: rgba(255,255,255,0.01); }
-        .schedule-table td.num { text-align: right; font-family: monospace; color: #cbd5e1; }
+        .schedule-table th { background: var(--bg-surface-6); padding: 0.6rem 0.5rem; text-align: left; color: var(--text-faint); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; }
+        .schedule-table td { padding: 0.5rem; border-bottom: 1px solid rgba(var(--edge-rgb), 0.03); color: var(--text-muted); }
+        .schedule-table tr:hover td { background: rgba(var(--edge-rgb), 0.01); }
+        .schedule-table td.num { text-align: right; font-family: monospace; color: var(--text-tertiary); }
         .schedule-table td.interest { color: #f59e0b; }
         .schedule-table td.total { color: #10b981; font-weight: 700; }
-        .schedule-table td.bal { color: #64748b; }
+        .schedule-table td.bal { color: var(--text-dim); }
 
-        .empty-calc { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2.5rem 1rem; color: #334155; font-size: 0.85rem; text-align: center; }
+        .empty-calc { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2.5rem 1rem; color: var(--text-very-faint); font-size: 0.85rem; text-align: center; }
 
-        .summary-footer { display: flex; gap: 0.75rem; margin-top: 1.5rem; background: rgba(15,23,42,0.3); padding: 1rem; border-radius: 10px; color: #475569; font-size: 0.8rem; line-height: 1.4; }
+        .summary-footer { display: flex; gap: 0.75rem; margin-top: 1.5rem; background: var(--bg-surface-3); padding: 1rem; border-radius: 10px; color: var(--text-faint); font-size: 0.8rem; line-height: 1.4; }
 
         @media (max-width: 1100px) {
           .loan-create-grid { grid-template-columns: 1fr; }

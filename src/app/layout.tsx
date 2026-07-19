@@ -20,6 +20,10 @@ export const viewport: Viewport = {
 
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Navbar";
+import { ThemeProvider } from "@/components/ThemeProvider";
+
+// Se aplica antes de hidratar React para evitar el flash del tema incorrecto al cargar
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -29,7 +33,11 @@ export default function RootLayout({
 
   return (
     <html lang="es">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={inter.className}>
+        <ThemeProvider>
         <Providers>
           <div className="layout-container">
             <Navbar />
@@ -38,6 +46,7 @@ export default function RootLayout({
             </main>
           </div>
         </Providers>
+        </ThemeProvider>
 
 
         <style dangerouslySetInnerHTML={{

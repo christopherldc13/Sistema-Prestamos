@@ -279,13 +279,13 @@ export default function PlansPage() {
         .plans-title {
           font-size: 2.5rem;
           font-weight: 800;
-          color: white;
+          color: var(--text-main);
           margin: 0 0 0.75rem;
           letter-spacing: -0.03em;
         }
         .plans-subtitle {
           font-size: 1.05rem;
-          color: #94a3b8;
+          color: var(--text-muted);
           max-width: 560px;
           margin: 0 auto 1.75rem;
           line-height: 1.6;
@@ -294,8 +294,8 @@ export default function PlansPage() {
         /* Billing toggle */
         .billing-toggle-wrap {
           display: inline-flex;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(var(--edge-rgb), 0.05);
+          border: 1px solid rgba(var(--edge-rgb), 0.1);
           border-radius: 12px;
           padding: 4px;
           gap: 4px;
@@ -308,16 +308,16 @@ export default function PlansPage() {
           border-radius: 9px;
           border: none;
           background: transparent;
-          color: #94a3b8;
+          color: var(--text-muted);
           font-size: 0.9rem;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
-        .billing-btn:hover { color: #f8fafc; }
+        .billing-btn:hover { color: var(--text-main); }
         .billing-active {
           background: rgba(99,102,241,0.25);
-          color: #f8fafc;
+          color: var(--text-main);
           box-shadow: 0 2px 8px rgba(99,102,241,0.2);
         }
         .billing-save-tag {
@@ -338,8 +338,8 @@ export default function PlansPage() {
           align-items: start;
         }
         .plan-card {
-          background: rgba(30,41,59,0.7);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--bg-card);
+          border: 1px solid rgba(var(--edge-rgb), 0.08);
           border-radius: 20px;
           padding: 2rem;
           position: relative;
@@ -354,7 +354,7 @@ export default function PlansPage() {
         }
         .plan-card-featured {
           border-color: rgba(168,85,247,0.4);
-          background: rgba(30,20,50,0.85);
+          background: var(--bg-featured);
           box-shadow: 0 0 40px rgba(168,85,247,0.1);
         }
         .plan-card-current {
@@ -389,7 +389,7 @@ export default function PlansPage() {
         .plan-icon { display: flex; align-items: center; }
         .plan-name-section { display: flex; flex-direction: column; gap: 0.25rem; }
         .plan-name { font-size: 1.6rem; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
-        .plan-tagline { color: #94a3b8; font-size: 0.9rem; margin: 0; }
+        .plan-tagline { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
 
         .plan-price-section {
           display: flex;
@@ -401,8 +401,8 @@ export default function PlansPage() {
           align-items: baseline;
           gap: 0.25rem;
         }
-        .plan-price { font-size: 2rem; font-weight: 800; color: white; }
-        .plan-price-note { color: #94a3b8; font-size: 0.9rem; }
+        .plan-price { font-size: 2rem; font-weight: 800; color: var(--text-main); }
+        .plan-price-note { color: var(--text-muted); font-size: 0.9rem; }
         .annual-saving {
           display: inline-block;
           background: rgba(16,185,129,0.15);
@@ -416,11 +416,11 @@ export default function PlansPage() {
         }
         .annual-hint {
           font-size: 0.78rem;
-          color: #64748b;
+          color: var(--text-dim);
         }
         .annual-hint span { color: #34d399; }
 
-        .plan-divider { height: 1px; background: rgba(255,255,255,0.07); }
+        .plan-divider { height: 1px; background: rgba(var(--edge-rgb), 0.07); }
         .plan-features {
           list-style: none;
           padding: 0;
@@ -435,19 +435,19 @@ export default function PlansPage() {
           align-items: center;
           gap: 0.6rem;
           font-size: 0.9rem;
-          color: #cbd5e1;
+          color: var(--text-tertiary);
         }
         .feature-disabled { opacity: 0.4; }
-        .feature-icon { color: #64748b; display: flex; }
+        .feature-icon { color: var(--text-dim); display: flex; }
         .feature-label { flex: 1; }
         .feature-value { display: flex; align-items: center; }
         .limit-badge {
-          background: rgba(255,255,255,0.08);
+          background: rgba(var(--edge-rgb), 0.08);
           padding: 0.15rem 0.6rem;
           border-radius: 99px;
           font-size: 0.8rem;
           font-weight: 600;
-          color: white;
+          color: var(--text-main);
         }
         .check-icon { color: #4ade80; }
         .x-icon { color: #f87171; }
@@ -469,9 +469,9 @@ export default function PlansPage() {
         }
         .plan-btn:hover:not(:disabled) { opacity: 0.88; transform: scale(0.99); }
         .plan-btn-current {
-          background: rgba(255,255,255,0.06);
-          border-color: rgba(255,255,255,0.1);
-          color: #64748b;
+          background: rgba(var(--edge-rgb), 0.06);
+          border-color: rgba(var(--edge-rgb), 0.1);
+          color: var(--text-dim);
           cursor: default;
         }
 
@@ -480,29 +480,29 @@ export default function PlansPage() {
         .compare-title {
           font-size: 1.5rem;
           font-weight: 700;
-          color: white;
+          color: var(--text-main);
           margin-bottom: 1.5rem;
           text-align: center;
         }
         .compare-table-wrapper {
-          background: rgba(30,41,59,0.6);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: var(--bg-card);
+          border: 1px solid rgba(var(--edge-rgb), 0.07);
           border-radius: 16px;
           overflow: hidden;
         }
         .compare-table { width: 100%; border-collapse: collapse; }
-        .compare-table thead tr { background: rgba(255,255,255,0.04); }
+        .compare-table thead tr { background: rgba(var(--edge-rgb), 0.04); }
         .compare-table th {
           padding: 1rem 1.25rem;
           text-align: center;
           font-size: 0.95rem;
           font-weight: 700;
-          color: #94a3b8;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
+          color: var(--text-muted);
+          border-bottom: 1px solid rgba(var(--edge-rgb), 0.06);
         }
         .compare-feature-col {
           text-align: left !important;
-          color: #64748b !important;
+          color: var(--text-dim) !important;
           font-size: 0.8rem !important;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -521,21 +521,21 @@ export default function PlansPage() {
         .compare-table td {
           padding: 0.85rem 1.25rem;
           text-align: center;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid rgba(var(--edge-rgb), 0.04);
         }
         .row-even { background: transparent; }
-        .row-odd { background: rgba(255,255,255,0.02); }
-        .row-price td { border-top: 1px solid rgba(255,255,255,0.08); border-bottom: none; }
+        .row-odd { background: rgba(var(--edge-rgb), 0.02); }
+        .row-price td { border-top: 1px solid rgba(var(--edge-rgb), 0.08); border-bottom: none; }
         .feature-col {
           text-align: left !important;
-          color: #cbd5e1;
+          color: var(--text-tertiary);
           font-size: 0.9rem;
           display: flex;
           align-items: center;
           gap: 0.6rem;
         }
-        .feature-row-icon { color: #64748b; display: flex; }
-        .value-col { font-size: 0.9rem; color: #e2e8f0; }
+        .feature-row-icon { color: var(--text-dim); display: flex; }
+        .value-col { font-size: 0.9rem; color: var(--text-secondary); }
         .table-limit { font-weight: 600; }
 
         /* CTA */
@@ -551,7 +551,7 @@ export default function PlansPage() {
           gap: 1.25rem;
         }
         .cta-text {
-          color: #94a3b8;
+          color: var(--text-muted);
           font-size: 1rem;
           max-width: 500px;
           margin: 0;

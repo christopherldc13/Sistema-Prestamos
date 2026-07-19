@@ -6,9 +6,11 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LogOut, User, LayoutDashboard, Users, CreditCard,
   BarChart3, Menu, X, Settings, AlertTriangle, Clock,
-  ShieldAlert, ShieldCheck, Zap, ChevronDown, ChevronRight
+  ShieldAlert, ShieldCheck, Zap, ChevronDown, ChevronRight,
+  Sun, Moon
 } from "lucide-react";
 import { getPlan, type PlanId } from "@/lib/plans";
+import { useTheme } from "@/components/ThemeProvider";
 
 function getLicenseInfo(expiresAt: string | null) {
   if (!expiresAt) return null;
@@ -22,6 +24,7 @@ function getLicenseInfo(expiresAt: string | null) {
 
 export function Navbar() {
   const { data: session } = useSession();
+  const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [licenseExpiresAt, setLicenseExpiresAt] = useState<string | null>(null);
@@ -98,6 +101,16 @@ export function Navbar() {
                   : <><Clock size={13} /> {licInfo.daysLeft}d</>}
               </div>
             )}
+
+            {/* Theme toggle */}
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo noche"}
+              aria-label="Cambiar tema"
+            >
+              {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
 
             {/* User dropdown */}
             <div className="user-menu-wrap" ref={userMenuRef}>
@@ -195,6 +208,12 @@ export function Navbar() {
                     : <><Clock size={16} /> Tu licencia vence en {licInfo.daysLeft} días</>}
                 </li>
               )}
+              <li>
+                <button className="mobile-theme-toggle" onClick={toggleTheme}>
+                  {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                  <span>{theme === "dark" ? "Modo claro" : "Modo noche"}</span>
+                </button>
+              </li>
               <li className="mobile-user-row">
                 <User size={20} />
                 <span>{session.user?.name || "Admin"}{isSuperadmin && " (Maestro)"}</span>
@@ -210,9 +229,9 @@ export function Navbar() {
 
         <style jsx>{`
           .glass-nav {
-            background: rgba(15, 23, 42, 0.92);
+            background: var(--bg-surface-92);
             backdrop-filter: blur(14px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(var(--edge-rgb), 0.08);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -248,7 +267,7 @@ export function Navbar() {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            color: #94a3b8;
+            color: var(--text-muted);
             text-decoration: none;
             font-weight: 500;
             font-size: 0.88rem;
@@ -258,8 +277,8 @@ export function Navbar() {
             white-space: nowrap;
           }
           .nav-links :global(a:hover) {
-            color: #f8fafc;
-            background: rgba(255, 255, 255, 0.07);
+            color: var(--text-main);
+            background: rgba(var(--edge-rgb), 0.07);
           }
 
           /* Right actions area */
@@ -280,7 +299,7 @@ export function Navbar() {
             border-radius: 20px;
             font-size: 0.7rem;
             font-weight: 700;
-            background: rgba(255,255,255,0.04);
+            background: rgba(var(--edge-rgb), 0.04);
             border: 1px solid;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -303,6 +322,42 @@ export function Navbar() {
           .chip-expired  { background: rgba(239,68,68,0.15);  color: #ef4444; border: 1px solid rgba(239,68,68,0.4); animation: pulse-chip 1.5s infinite; }
           @keyframes pulse-chip { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
+          /* Theme toggle */
+          .theme-toggle-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-soft-8);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+          }
+          .theme-toggle-btn:hover {
+            background: var(--bg-hover-strong);
+            color: var(--text-main);
+            border-color: var(--border);
+          }
+          .mobile-theme-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-hover);
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+          }
+
           /* User dropdown trigger */
           .user-menu-wrap {
             position: relative;
@@ -311,17 +366,17 @@ export function Navbar() {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(var(--edge-rgb), 0.05);
+            border: 1px solid rgba(var(--edge-rgb), 0.1);
             border-radius: 10px;
             padding: 0.4rem 0.75rem 0.4rem 0.5rem;
             cursor: pointer;
-            color: #f8fafc;
+            color: var(--text-main);
             transition: all 0.2s;
           }
           .user-trigger:hover {
-            background: rgba(255,255,255,0.09);
-            border-color: rgba(255,255,255,0.18);
+            background: rgba(var(--edge-rgb), 0.09);
+            border-color: rgba(var(--edge-rgb), 0.18);
           }
           .user-avatar {
             width: 28px;
@@ -353,7 +408,7 @@ export function Navbar() {
             letter-spacing: 0.03em;
           }
           .chevron {
-            color: #64748b;
+            color: var(--text-dim);
             transition: transform 0.2s;
             flex-shrink: 0;
           }
@@ -365,12 +420,12 @@ export function Navbar() {
             top: calc(100% + 12px);
             right: 0;
             width: 250px;
-            background: linear-gradient(180deg, #141d33, #0f172a 45%);
-            border: 1px solid rgba(255,255,255,0.09);
+            background: linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 45%);
+            border: 1px solid rgba(var(--edge-rgb), 0.09);
             border-radius: 18px;
             padding: 0;
             overflow: hidden;
-            box-shadow: 0 28px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04);
+            box-shadow: 0 28px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(var(--edge-rgb), 0.04);
             z-index: 100;
             animation: dd-in 0.16s cubic-bezier(.22,.68,0,1.2);
           }
@@ -388,7 +443,7 @@ export function Navbar() {
             gap: 11px;
             padding: 16px 14px;
             background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.07) 70%);
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid rgba(var(--edge-rgb), 0.07);
           }
           .dd-avatar-ring {
             width: 44px;
@@ -417,7 +472,7 @@ export function Navbar() {
             margin: 0;
             font-size: 0.9rem;
             font-weight: 800;
-            color: #f8fafc;
+            color: var(--text-main);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -445,7 +500,7 @@ export function Navbar() {
             padding: 3px 7px;
             border-radius: 20px;
             border: 1px solid;
-            background: rgba(15,23,42,0.5);
+            background: var(--bg-surface-5);
           }
 
           /* Item group */
@@ -455,7 +510,7 @@ export function Navbar() {
           .dd-section-label {
             font-size: 0.64rem;
             font-weight: 800;
-            color: #475569;
+            color: var(--text-faint);
             text-transform: uppercase;
             letter-spacing: 0.11em;
             padding: 6px 8px 5px;
@@ -469,7 +524,7 @@ export function Navbar() {
             gap: 11px;
             padding: 9px 8px;
             border-radius: 11px;
-            color: #cbd5e1;
+            color: var(--text-tertiary);
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: 600;
@@ -477,10 +532,10 @@ export function Navbar() {
             cursor: pointer;
             width: 100%;
           }
-          .dd-item:hover { background: rgba(255,255,255,0.055); transform: translateX(2px); }
+          .dd-item:hover { background: rgba(var(--edge-rgb), 0.055); transform: translateX(2px); }
           .dd-item-text { line-height:1; flex: 1; }
           .dd-item-arrow {
-            color: #475569;
+            color: var(--text-faint);
             opacity: 0;
             transform: translateX(-4px);
             transition: opacity 0.15s, transform 0.15s;
@@ -500,10 +555,10 @@ export function Navbar() {
           }
           .dd-icon-yellow { background: linear-gradient(135deg, rgba(250,204,21,.25), rgba(250,204,21,.06)); color:#fbbf24; }
           .dd-icon-green  { background: linear-gradient(135deg, rgba(34,197,94,.25),  rgba(34,197,94,.06));  color:#4ade80; }
-          .dd-icon-slate  { background: linear-gradient(135deg, rgba(148,163,184,.2), rgba(148,163,184,.05)); color:#cbd5e1; }
+          .dd-icon-slate  { background: linear-gradient(135deg, rgba(148,163,184,.2), rgba(148,163,184,.05)); color:var(--text-tertiary); }
 
           /* Footer / logout */
-          .dd-footer { padding: 8px; padding-top: 2px; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 2px; }
+          .dd-footer { padding: 8px; padding-top: 2px; border-top: 1px solid rgba(var(--edge-rgb), 0.06); margin-top: 2px; }
           .dd-logout {
             display: flex;
             flex-direction: row;
@@ -529,7 +584,7 @@ export function Navbar() {
             display: none;
             background: transparent;
             border: none;
-            color: white;
+            color: var(--text-main);
             cursor: pointer;
             padding: 8px;
             border-radius: 8px;
@@ -540,10 +595,10 @@ export function Navbar() {
             top: 100%;
             left: 0;
             right: 0;
-            background: rgba(15, 23, 42, 0.98);
+            background: var(--bg-surface-98);
             backdrop-filter: blur(16px);
             padding: 1.25rem 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(var(--edge-rgb), 0.1);
             box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
           }
           .mobile-links {
@@ -558,15 +613,15 @@ export function Navbar() {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            color: #94a3b8;
+            color: var(--text-muted);
             padding: 0.75rem;
             border-radius: 8px;
             font-weight: 500;
             text-decoration: none;
           }
           .mobile-links :global(a:hover) {
-            background: rgba(255,255,255,0.05);
-            color: #f8fafc;
+            background: rgba(var(--edge-rgb), 0.05);
+            color: var(--text-main);
           }
           .mobile-license-row {
             display: flex;
@@ -582,8 +637,8 @@ export function Navbar() {
             align-items: center;
             gap: 0.75rem;
             padding: 1rem 0.75rem 0.75rem;
-            color: #f8fafc;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-main);
+            border-top: 1px solid rgba(var(--edge-rgb), 0.1);
             margin-top: 0.5rem;
             font-weight: 600;
           }

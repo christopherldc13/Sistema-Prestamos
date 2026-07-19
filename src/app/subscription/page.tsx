@@ -172,14 +172,14 @@ export default function SubscriptionPage() {
         .sub-title {
           font-size: 2.25rem;
           font-weight: 800;
-          color: white;
+          color: var(--text-main);
           margin: 0;
           letter-spacing: -0.02em;
         }
 
         .sub-desc {
           font-size: 1.05rem;
-          color: #94a3b8;
+          color: var(--text-muted);
           max-width: 600px;
           line-height: 1.5;
         }
@@ -205,7 +205,7 @@ export default function SubscriptionPage() {
           overflow: hidden;
           box-shadow: 0 10px 30px rgba(0,0,0,0.3);
           transition: transform 0.3s ease, box-shadow 0.3s ease;
-          border: 1px solid rgba(255,255,255,0.05); /* Slight border for depth */
+          border: 1px solid rgba(var(--edge-rgb), 0.05); /* Slight border for depth */
         }
 
         .bank-card:hover {
@@ -216,7 +216,7 @@ export default function SubscriptionPage() {
         .card-overlay {
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
-          background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+          background: linear-gradient(180deg, rgba(var(--edge-rgb), 0.05) 0%, rgba(var(--edge-rgb), 0) 100%);
           pointer-events: none;
         }
 
@@ -236,7 +236,7 @@ export default function SubscriptionPage() {
           background: white;
           padding: 8px;
           box-shadow: 0 6px 20px rgba(0,0,0,0.45);
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(var(--edge-rgb), 0.1);
         }
 
         .bank-info h3 {
@@ -271,7 +271,7 @@ export default function SubscriptionPage() {
           font-size: 0.7rem;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: rgba(255,255,255,0.6);
+          color: rgba(var(--edge-rgb), 0.6);
           margin-bottom: 0.3rem;
         }
 
@@ -285,7 +285,7 @@ export default function SubscriptionPage() {
         }
 
         .copy-btn {
-          background: rgba(255,255,255,0.15);
+          background: rgba(var(--edge-rgb), 0.15);
           border: none;
           color: white;
           width: 40px;
@@ -299,7 +299,7 @@ export default function SubscriptionPage() {
         }
 
         .copy-btn:hover {
-          background: rgba(255,255,255,0.25);
+          background: rgba(var(--edge-rgb), 0.25);
         }
 
         .copy-btn:active {

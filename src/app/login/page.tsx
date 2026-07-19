@@ -3,11 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Lock, Mail, ChevronRight, AlertCircle, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Lock, Mail, ChevronRight, AlertCircle, ShieldCheck, Eye, EyeOff, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { theme, toggleTheme } = useTheme();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +54,15 @@ export default function LoginPage() {
 
     return (
         <div className="login-viewer">
+            <button
+                className="login-theme-toggle"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo noche"}
+                aria-label="Cambiar tema"
+            >
+                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             {/* Animated background orbs */}
             <div className="orb orb-1" />
             <div className="orb orb-2" />
@@ -169,6 +180,28 @@ export default function LoginPage() {
           z-index: 9999;
         }
 
+        .login-theme-toggle {
+          position: absolute;
+          top: 1.5rem;
+          right: 1.5rem;
+          z-index: 2;
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(var(--edge-rgb), 0.06);
+          border: 1px solid rgba(var(--edge-rgb), 0.1);
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .login-theme-toggle:hover {
+          background: rgba(var(--edge-rgb), 0.1);
+          color: var(--text-main);
+        }
+
         /* ── Animated background orbs ── */
         .orb {
           position: absolute;
@@ -208,7 +241,7 @@ export default function LoginPage() {
           width: 90%;
           max-width: 400px;
           padding: 2.75rem 2.5rem;
-          border: 1px solid rgba(255,255,255,0.08);
+          border: 1px solid rgba(var(--edge-rgb), 0.08);
           box-shadow: 0 0 0 1px rgba(99,102,241,0.1), 0 24px 64px rgba(0,0,0,0.5);
           z-index: 1;
         }
@@ -280,7 +313,7 @@ export default function LoginPage() {
         .login-input-wrap .input-icon {
           position: absolute;
           left: 1rem;
-          color: #475569;
+          color: var(--text-faint);
           pointer-events: none;
           z-index: 1;
           transition: color 0.2s;
@@ -289,19 +322,19 @@ export default function LoginPage() {
 
         .login-input-wrap input {
           width: 100%;
-          background: rgba(0,0,0,0.25);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--bg-surface-4);
+          border: 1px solid rgba(var(--edge-rgb), 0.08);
           border-radius: 10px;
           padding: 0.875rem 3rem 0.875rem 3rem;
-          color: white;
+          color: var(--text-main);
           font-size: 0.95rem;
           outline: none;
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
-        .login-input-wrap input::placeholder { color: #334155; }
+        .login-input-wrap input::placeholder { color: var(--text-very-faint); }
         .login-input-wrap input:focus {
           border-color: #6366f1;
-          background: rgba(0,0,0,0.4);
+          background: var(--bg-surface-6);
           box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
         }
 
@@ -311,7 +344,7 @@ export default function LoginPage() {
           right: 0.875rem;
           background: none;
           border: none;
-          color: #475569;
+          color: var(--text-faint);
           cursor: pointer;
           padding: 4px;
           display: flex;
@@ -319,7 +352,7 @@ export default function LoginPage() {
           border-radius: 6px;
           transition: color 0.2s;
         }
-        .toggle-password:hover { color: #94a3b8; }
+        .toggle-password:hover { color: var(--text-muted); }
 
         /* ── Submit button ── */
         .login-btn-pro {
@@ -348,7 +381,7 @@ export default function LoginPage() {
         .login-footer {
           margin-top: 2.25rem;
           text-align: center;
-          color: #1e293b;
+          color: var(--text-very-faint);
           font-size: 0.75rem;
           font-weight: 500;
         }
@@ -356,7 +389,7 @@ export default function LoginPage() {
         /* ── Loader spinner ── */
         .loader-icon {
           width: 18px; height: 18px;
-          border: 2px solid rgba(255,255,255,0.2);
+          border: 2px solid rgba(var(--edge-rgb), 0.2);
           border-top-color: white;
           border-radius: 50%;
           animation: spin 0.6s linear infinite;
