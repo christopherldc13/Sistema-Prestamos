@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { hash } from "bcryptjs";
+import { generateRandomPassword } from "@/lib/password";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -20,6 +22,10 @@ export async function GET() {
                     id: true, name: true, email: true, phone: true,
                     role: true, isActive: true, licenseExpiresAt: true,
                     subscriptionPlan: true, createdAt: true,
+                    maxClients: true, maxActiveLoans: true, maxPaymentHistory: true,
+                    hasContractPDF: true, hasStatementPDF: true, hasFrenchAmortization: true,
+                    hasAmortizationTable: true, hasAdvancedReports: true, hasExport: true,
+                    hasCustomBranding: true, planPrice: true,
                     _count: { select: { clients: true, loans: true } },
                 },
             });
@@ -79,13 +85,16 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { email, password, name, role } = body;
+        const { email, name, role } = body;
 
-        if (!email || !password) {
-            return NextResponse.json({ error: "Email y contraseña son obligatorios" }, { status: 400 });
+        if (!email) {
+            return NextResponse.json({ error: "El correo es obligatorio" }, { status: 400 });
         }
 
-        const hashedPassword = await hash(password, 12);
+        // La contraseña la genera el sistema — el Maestro nunca la escribe ni la ve,
+        // se le envía únicamente al usuario nuevo por correo.
+        const plainPassword = generateRandomPassword();
+        const hashedPassword = await hash(plainPassword, 12);
 
         const createData: any = {
             email,
@@ -99,6 +108,15 @@ export async function POST(req: NextRequest) {
         if (body.phone) extendedData.phone = body.phone;
         if (body.licenseExpiresAt) extendedData.licenseExpiresAt = new Date(body.licenseExpiresAt);
         if (body.subscriptionPlan) extendedData.subscriptionPlan = body.subscriptionPlan;
+        const PLAN_OVERRIDE_FIELDS = [
+            "maxClients", "maxActiveLoans", "maxPaymentHistory",
+            "hasContractPDF", "hasStatementPDF", "hasFrenchAmortization",
+            "hasAmortizationTable", "hasAdvancedReports", "hasExport",
+            "hasCustomBranding", "planPrice",
+        ] as const;
+        for (const key of PLAN_OVERRIDE_FIELDS) {
+            if (body[key] !== undefined) extendedData[key] = body[key];
+        }
 
         let user;
         try {
@@ -111,9 +129,21 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        let emailSent = true;
+        try {
+            await sendWelcomeEmail({ name: user.name || "", email: user.email, password: plainPassword });
+        } catch (emailError) {
+            console.error("Error enviando correo de bienvenida:", emailError);
+            emailSent = false;
+        }
+
         return NextResponse.json({
             id: user.id, name: user.name, email: user.email,
             role: user.role, isActive: user.isActive, createdAt: user.createdAt,
+            emailSent,
+            // Solo se devuelve la contraseña cuando el correo falló, para que el Maestro
+            // pueda comunicarla manualmente — si el correo se envió, no hace falta exponerla.
+            ...(emailSent ? {} : { generatedPassword: plainPassword }),
         }, { status: 201 });
     } catch (error: any) {
         if (error.code === "P2002") return NextResponse.json({ error: "El correo ya está en uso" }, { status: 400 });

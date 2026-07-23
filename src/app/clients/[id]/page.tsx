@@ -409,7 +409,7 @@ export default function ClientDetailsPage() {
                 .progress-bar-container { width: 220px; }
                 .progress-label { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.5rem; text-align: right; }
                 .progress-track { width: 100%; height: 6px; background: rgba(var(--edge-rgb), 0.05); border-radius: 10px; overflow: hidden; }
-                .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #10b981); border-radius: 10px; }
+                .progress-fill { height: 100%; background: #10b981; border-radius: 10px; }
 
                 .empty-history { padding: 4rem; text-align: center; color: var(--text-faint); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
                 

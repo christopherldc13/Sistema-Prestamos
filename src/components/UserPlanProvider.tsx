@@ -17,6 +17,7 @@ const UserPlanContext = createContext<UserPlanContextValue | undefined>(undefine
 export function UserPlanProvider({ children }: { children: React.ReactNode }) {
     const { status } = useSession();
     const [subscriptionPlan, setSubscriptionPlan] = useState<PlanId>("basic");
+    const [plan, setPlan] = useState<PlanFeatures>(getPlan("basic"));
     const [licenseExpiresAt, setLicenseExpiresAt] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -26,6 +27,7 @@ export function UserPlanProvider({ children }: { children: React.ReactNode }) {
             if (res.ok) {
                 const d = await res.json();
                 if (d?.subscriptionPlan) setSubscriptionPlan(d.subscriptionPlan as PlanId);
+                if (d?.plan) setPlan(d.plan as PlanFeatures);
                 setLicenseExpiresAt(d?.licenseExpiresAt ?? null);
             }
         } catch {
@@ -47,7 +49,7 @@ export function UserPlanProvider({ children }: { children: React.ReactNode }) {
 
     const value: UserPlanContextValue = {
         subscriptionPlan,
-        plan: getPlan(subscriptionPlan),
+        plan,
         licenseExpiresAt,
         loading,
         refresh,

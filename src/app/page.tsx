@@ -98,8 +98,7 @@ export default function Home() {
               ? `${stats.overdueLoans} con retraso`
               : stats.activeLoans > 0 ? "Al corriente" : "Sin préstamos activos",
             subOk: stats.overdueLoans > 0 ? false : (stats.activeLoans > 0 ? true : null),
-            color: "#6366f1",
-            gradient: "linear-gradient(135deg,#6366f1,#4f46e5)",
+            color: "#4f46e5",
           },
           {
             title: "Capital Prestado",
@@ -108,8 +107,7 @@ export default function Home() {
             icon: <DollarSign size={18} />,
             sub: `Pendiente: ${fmtMoney(stats.pendingBalance)}`,
             subOk: stats.pendingBalance > 0 ? false : true,
-            color: "#a855f7",
-            gradient: "linear-gradient(135deg,#a855f7,#7e22ce)",
+            color: "#7e22ce",
           },
           {
             title: "Recaudación",
@@ -118,8 +116,7 @@ export default function Home() {
             icon: <TrendingUp size={18} />,
             sub: "Total histórico",
             subOk: true,
-            color: "#10b981",
-            gradient: "linear-gradient(135deg,#10b981,#059669)",
+            color: "#059669",
           },
           {
             title: "Ganancia Bruta",
@@ -128,8 +125,7 @@ export default function Home() {
             icon: <Wallet size={18} />,
             sub: stats.totalMoraCollected > 0 ? "Interés + Mora" : "Intereses generados",
             subOk: true,
-            color: "#f59e0b",
-            gradient: "linear-gradient(135deg,#f59e0b,#d97706)",
+            color: "#d97706",
           },
         ].map(card => (
           <motion.div key={card.title} variants={item}>
@@ -238,11 +234,11 @@ export default function Home() {
         <h2 className="section-label">Operaciones Rápidas</h2>
         <motion.div className="quick-grid" variants={container} initial="hidden" animate="visible">
           {[
-            { href: "/clients",       title: "Clientes",           desc: "Padrón de clientes activos",    icon: <Users size={18} />,        color: "linear-gradient(135deg,#6366f1,#4f46e5)" },
-            { href: "/loans/create",  title: "Nuevo Préstamo",     desc: "Generar crédito inmediato",     icon: <Clock size={18} />,        color: "linear-gradient(135deg,#10b981,#059669)" },
-            { href: "/loans",         title: "Cartera",            desc: "Ver todos los préstamos",       icon: <LayoutDashboard size={18} />,color: "linear-gradient(135deg,#a855f7,#7e22ce)" },
-            { href: "/reports",       title: "Reportes",           desc: "Análisis de rentabilidad",      icon: <FileText size={18} />,     color: "linear-gradient(135deg,#f59e0b,#d97706)" },
-            { href: "/subscription",  title: "Suscripción",        desc: "Pagos y licencia",              icon: <ShieldCheck size={18} />,  color: "linear-gradient(135deg,#ec4899,#be185d)" },
+            { href: "/clients",       title: "Clientes",           desc: "Padrón de clientes activos",    icon: <Users size={18} />,        color: "#4f46e5" },
+            { href: "/loans/create",  title: "Nuevo Préstamo",     desc: "Generar crédito inmediato",     icon: <Clock size={18} />,        color: "#059669" },
+            { href: "/loans",         title: "Cartera",            desc: "Ver todos los préstamos",       icon: <LayoutDashboard size={18} />,color: "#7e22ce" },
+            { href: "/reports",       title: "Reportes",           desc: "Análisis de rentabilidad",      icon: <FileText size={18} />,     color: "#d97706" },
+            { href: "/subscription",  title: "Suscripción",        desc: "Pagos y licencia",              icon: <ShieldCheck size={18} />,  color: "#be185d" },
           ].map(a => (
             <motion.div key={a.href} variants={item}>
               <Link href={a.href} className="quick-item glass-card">
@@ -632,13 +628,13 @@ export default function Home() {
   );
 }
 
-function StatCard({ title, value, icon, sub, subOk, gradient, loading }: any) {
+function StatCard({ title, value, icon, sub, subOk, color, loading }: any) {
   return (
     <div className="stat-card">
-      <div className="stat-bar" style={{ background: gradient }} />
+      <div className="stat-bar" style={{ background: color }} />
       <div className="stat-head">
         <span className="stat-label">{title}</span>
-        <div className="stat-icon" style={{ background: gradient }}>{icon}</div>
+        <div className="stat-icon" style={{ background: color }}>{icon}</div>
       </div>
       {loading
         ? <div className="stat-val-skeleton" />

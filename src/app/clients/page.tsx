@@ -15,19 +15,19 @@ interface Client {
     loans?: any[];
 }
 
-const AVATAR_GRADIENTS = [
-    "linear-gradient(135deg,#6366f1,#4f46e5)",
-    "linear-gradient(135deg,#a855f7,#7e22ce)",
-    "linear-gradient(135deg,#10b981,#059669)",
-    "linear-gradient(135deg,#f59e0b,#d97706)",
-    "linear-gradient(135deg,#ec4899,#be185d)",
-    "linear-gradient(135deg,#06b6d4,#0891b2)",
+const AVATAR_COLORS = [
+    "#4f46e5",
+    "#7e22ce",
+    "#059669",
+    "#d97706",
+    "#be185d",
+    "#0891b2",
 ];
 
-function getAvatarGradient(name: string) {
+function getAvatarColor(name: string) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function getInitials(name: string) {
@@ -219,7 +219,7 @@ export default function ClientsPage() {
                             >
                                 <div className={`card-accent ${hasOverdue ? "accent-mora" : hasActive ? "accent-active" : "accent-none"}`} />
                                 <div className="card-top">
-                                    <div className="avatar-initials" style={{ background: getAvatarGradient(client.fullName) }}>
+                                    <div className="avatar-initials" style={{ background: getAvatarColor(client.fullName) }}>
                                         {getInitials(client.fullName)}
                                     </div>
                                     <div className="name-box">
@@ -429,8 +429,8 @@ export default function ClientsPage() {
         .client-card-pro.card-mora:hover { border-color: rgba(244,63,94,0.4); }
 
         .card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-        .accent-active { background: linear-gradient(90deg,#6366f1,#a855f7); }
-        .accent-mora   { background: linear-gradient(90deg,#f43f5e,#fb923c); }
+        .accent-active { background: var(--primary); }
+        .accent-mora   { background: #f43f5e; }
         .accent-none   { background: rgba(var(--edge-rgb), 0.06); }
 
         .card-top { display: flex; align-items: center; gap: 1rem; position: relative; }

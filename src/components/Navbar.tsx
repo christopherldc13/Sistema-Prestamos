@@ -236,9 +236,7 @@ export function Navbar() {
           .nav-brand {
             font-size: 1.45rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--primary);
             text-decoration: none;
             flex-shrink: 0;
             letter-spacing: -0.02em;
@@ -370,7 +368,7 @@ export function Navbar() {
             width: 28px;
             height: 28px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #6366f1, #a855f7);
+            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -408,7 +406,7 @@ export function Navbar() {
             top: calc(100% + 12px);
             right: 0;
             width: 250px;
-            background: linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 45%);
+            background: var(--bg-elevated);
             border: 1px solid rgba(var(--edge-rgb), 0.09);
             border-radius: 18px;
             padding: 0;
@@ -430,7 +428,7 @@ export function Navbar() {
             align-items: center;
             gap: 11px;
             padding: 16px 14px;
-            background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.07) 70%);
+            background: rgba(99,102,241,0.12);
             border-bottom: 1px solid rgba(var(--edge-rgb), 0.07);
           }
           .dd-avatar-ring {
@@ -438,7 +436,7 @@ export function Navbar() {
             height: 44px;
             border-radius: 13px;
             padding: 2px;
-            background: linear-gradient(135deg,#818cf8,#c084fc);
+            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -541,9 +539,9 @@ export function Navbar() {
             justify-content: center;
             flex-shrink: 0;
           }
-          .dd-icon-yellow { background: linear-gradient(135deg, rgba(250,204,21,.25), rgba(250,204,21,.06)); color:#fbbf24; }
-          .dd-icon-green  { background: linear-gradient(135deg, rgba(34,197,94,.25),  rgba(34,197,94,.06));  color:#4ade80; }
-          .dd-icon-slate  { background: linear-gradient(135deg, rgba(148,163,184,.2), rgba(148,163,184,.05)); color:var(--text-tertiary); }
+          .dd-icon-yellow { background: rgba(250,204,21,.15); color:#fbbf24; }
+          .dd-icon-green  { background: rgba(34,197,94,.15);  color:#4ade80; }
+          .dd-icon-slate  { background: rgba(148,163,184,.15); color:var(--text-tertiary); }
 
           /* Footer / logout */
           .dd-footer { padding: 8px; padding-top: 2px; border-top: 1px solid rgba(var(--edge-rgb), 0.06); margin-top: 2px; }
@@ -558,7 +556,7 @@ export function Navbar() {
             color: #fb7185;
             font-size: 0.85rem;
             font-weight: 700;
-            background: linear-gradient(135deg, rgba(244,63,94,.14), rgba(244,63,94,.05));
+            background: rgba(244,63,94,.1);
             border: 1px solid rgba(244,63,94,.16);
             cursor: pointer;
             width: 100%;

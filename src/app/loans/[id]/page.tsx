@@ -929,8 +929,8 @@ export default function LoanDetailsPage() {
         .p-text { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
         .p-perc { font-size: 0.85rem; font-weight: 800; color: #6366f1; }
         .glow-bar-container { height: 12px; border-radius: 6px; background: rgba(var(--edge-rgb), 0.03); overflow: hidden; }
-        .glow-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #6366f1, #a855f7); box-shadow: 0 0 20px rgba(99,102,241,0.4); }
-        .glow-bar-fill.overdue { background: linear-gradient(90deg, #f43f5e, #fb923c); box-shadow: 0 0 20px rgba(244,63,94,0.4); }
+        .glow-bar-fill { height: 100%; border-radius: 6px; background: #6366f1; box-shadow: 0 0 20px rgba(99,102,241,0.4); }
+        .glow-bar-fill.overdue { background: #f43f5e; box-shadow: 0 0 20px rgba(244,63,94,0.4); }
 
         .next-payment-banner { display: flex; justify-content: space-between; align-items: center; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.15); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 2rem; }
         .next-payment-banner.danger { background: rgba(244,63,94,0.06); border-color: rgba(244,63,94,0.2); }
@@ -954,7 +954,7 @@ export default function LoanDetailsPage() {
         .amort-locked-block:hover { background: rgba(245,158,11,0.1); }
         .amort-locked-block strong { display: block; color: #fbbf24; font-size: 0.9rem; margin-bottom: 0.25rem; }
         .amort-locked-block p { font-size: 0.8rem; color: var(--text-dim); margin: 0; line-height: 1.5; }
-        .btn-upgrade-sm { display: inline-flex; align-items: center; gap: 0.3rem; background: linear-gradient(135deg,#7c3aed,#a855f7); color: white; border: none; padding: 0.4rem 0.9rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+        .btn-upgrade-sm { display: inline-flex; align-items: center; gap: 0.3rem; background: #7c3aed; color: white; border: none; padding: 0.4rem 0.9rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
         .h-count-group { display: flex; align-items: center; gap: 0.6rem; }
         .h-limit-badge { background: rgba(245,158,11,0.12); color: #fbbf24; padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
         .history-limit-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.5rem; background: rgba(245,158,11,0.06); border-top: 1px solid rgba(245,158,11,0.15); color: var(--text-dim); font-size: 0.82rem; cursor: pointer; }

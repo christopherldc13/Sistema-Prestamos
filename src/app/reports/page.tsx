@@ -273,7 +273,7 @@ export default function ReportsPage() {
                 .lock-icon-lg { color: var(--text-faint); }
                 .sidebar-locked h3 { font-size: 1rem; font-weight: 700; color: var(--text-main); margin: 0; }
                 .sidebar-locked p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; margin: 0; }
-                .btn-upgrade-inline { display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(135deg,#7c3aed,#a855f7); color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+                .btn-upgrade-inline { display: flex; align-items: center; gap: 0.4rem; background: #7c3aed; color: white; border: none; padding: 0.5rem 1.25rem; border-radius: 99px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
 
                 .stats-header-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
                 .kpi-card { padding: 2rem; position: relative; overflow: hidden; border-radius: 20px; }

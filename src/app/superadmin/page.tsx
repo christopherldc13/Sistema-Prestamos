@@ -9,7 +9,7 @@ import {
     DollarSign, AlertTriangle, KeyRound, X, Calendar, Phone, Search,
     Building2, TrendingUp, Clock, Trash2, Zap
 } from "lucide-react";
-import { PLANS, getPlan, type PlanId } from "@/lib/plans";
+import { PLANS, resolveUserPlan, type PlanId, type UserPlanOverrides } from "@/lib/plans";
 
 interface UserStats {
     clients: number;
@@ -20,7 +20,7 @@ interface UserStats {
     pendingBalance: number;
 }
 
-interface AdminUser {
+interface AdminUser extends UserPlanOverrides {
     id: string;
     name?: string;
     email: string;
@@ -49,6 +49,22 @@ interface GlobalStats {
 
 type ModalType = "create" | "resetPassword" | "editLicense" | "editPlan" | null;
 
+const LIMIT_FIELDS = [
+    { key: "maxClients" as const, label: "Clientes máximos" },
+    { key: "maxActiveLoans" as const, label: "Préstamos activos" },
+    { key: "maxPaymentHistory" as const, label: "Historial de pagos" },
+];
+
+const FEATURE_TOGGLES = [
+    { key: "hasContractPDF" as const, label: "Contrato en PDF" },
+    { key: "hasStatementPDF" as const, label: "Estado de cuenta en PDF" },
+    { key: "hasFrenchAmortization" as const, label: "Amortización francesa" },
+    { key: "hasAmortizationTable" as const, label: "Tabla de amortización" },
+    { key: "hasAdvancedReports" as const, label: "Reportes avanzados" },
+    { key: "hasExport" as const, label: "Exportar datos" },
+    { key: "hasCustomBranding" as const, label: "Marca personalizada" },
+];
+
 function getLicenseStatus(expiresAt?: string) {
     if (!expiresAt) return "none";
     const now = new Date();
@@ -74,12 +90,84 @@ export default function SuperadminDashboard() {
     const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
     const [createForm, setCreateForm] = useState({
-        name: "", email: "", password: "", phone: "",
+        name: "", email: "", phone: "",
         licenseExpiresAt: "", role: "admin"
     });
     const [resetPassword, setResetPassword] = useState("");
     const [newExpiry, setNewExpiry] = useState("");
-    const [selectedPlan, setSelectedPlan] = useState<PlanId>("basic");
+
+    type PlanForm = {
+        templateId: PlanId;
+        maxClients: number;
+        maxActiveLoans: number;
+        maxPaymentHistory: number;
+        hasContractPDF: boolean;
+        hasStatementPDF: boolean;
+        hasFrenchAmortization: boolean;
+        hasAmortizationTable: boolean;
+        hasAdvancedReports: boolean;
+        hasExport: boolean;
+        hasCustomBranding: boolean;
+        planPrice: string;
+    };
+    const [planForm, setPlanForm] = useState<PlanForm>(() => planFormFromTemplate("basic"));
+
+    function planFormFromTemplate(pid: PlanId): PlanForm {
+        const p = PLANS[pid];
+        return {
+            templateId: pid,
+            maxClients: p.maxClients,
+            maxActiveLoans: p.maxActiveLoans,
+            maxPaymentHistory: p.maxPaymentHistory,
+            hasContractPDF: p.hasContractPDF,
+            hasStatementPDF: p.hasStatementPDF,
+            hasFrenchAmortization: p.hasFrenchAmortization,
+            hasAmortizationTable: p.hasAmortizationTable,
+            hasAdvancedReports: p.hasAdvancedReports,
+            hasExport: p.hasExport,
+            hasCustomBranding: p.hasCustomBranding,
+            planPrice: "",
+        };
+    }
+
+    const openEditPlan = (u: AdminUser) => {
+        const templateId = (u.subscriptionPlan ?? "basic") as PlanId;
+        const base = PLANS[templateId];
+        setSelectedUser(u);
+        setPlanForm({
+            templateId,
+            maxClients: u.maxClients ?? base.maxClients,
+            maxActiveLoans: u.maxActiveLoans ?? base.maxActiveLoans,
+            maxPaymentHistory: u.maxPaymentHistory ?? base.maxPaymentHistory,
+            hasContractPDF: u.hasContractPDF ?? base.hasContractPDF,
+            hasStatementPDF: u.hasStatementPDF ?? base.hasStatementPDF,
+            hasFrenchAmortization: u.hasFrenchAmortization ?? base.hasFrenchAmortization,
+            hasAmortizationTable: u.hasAmortizationTable ?? base.hasAmortizationTable,
+            hasAdvancedReports: u.hasAdvancedReports ?? base.hasAdvancedReports,
+            hasExport: u.hasExport ?? base.hasExport,
+            hasCustomBranding: u.hasCustomBranding ?? base.hasCustomBranding,
+            planPrice: u.planPrice != null ? String(u.planPrice) : "",
+        });
+        setModal("editPlan");
+    };
+
+    const applyPlanTemplate = (pid: PlanId) => {
+        const p = PLANS[pid];
+        setPlanForm(f => ({
+            ...f,
+            templateId: pid,
+            maxClients: p.maxClients,
+            maxActiveLoans: p.maxActiveLoans,
+            maxPaymentHistory: p.maxPaymentHistory,
+            hasContractPDF: p.hasContractPDF,
+            hasStatementPDF: p.hasStatementPDF,
+            hasFrenchAmortization: p.hasFrenchAmortization,
+            hasAmortizationTable: p.hasAmortizationTable,
+            hasAdvancedReports: p.hasAdvancedReports,
+            hasExport: p.hasExport,
+            hasCustomBranding: p.hasCustomBranding,
+        }));
+    };
 
     useEffect(() => {
         if (status === "unauthenticated") router.push("/login");
@@ -130,8 +218,16 @@ export default function SuperadminDashboard() {
             body: JSON.stringify(createForm),
         });
         if (res.ok) {
-            showMsg("Licencia creada exitosamente");
-            setCreateForm({ name: "", email: "", password: "", phone: "", licenseExpiresAt: "", role: "admin" });
+            const d = await res.json();
+            if (d.emailSent) {
+                showMsg(`Licencia creada — se le enviaron las credenciales a ${d.email}`);
+            } else {
+                // El correo falló: la contraseña no queda visible en ningún otro lado, hay que
+                // mostrarla ahora mismo para que el Maestro se la pueda pasar al usuario manualmente.
+                alert(`El usuario "${d.email}" se creó, pero no se pudo enviar el correo de bienvenida.\n\nContraseña generada (cópiala, no se mostrará de nuevo):\n${d.generatedPassword}`);
+                showMsg("Licencia creada, pero el correo no se pudo enviar", "error");
+            }
+            setCreateForm({ name: "", email: "", phone: "", licenseExpiresAt: "", role: "admin" });
             setModal(null);
             fetchAll();
         } else {
@@ -159,13 +255,24 @@ export default function SuperadminDashboard() {
     const handleChangePlan = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedUser) return;
+        const base = PLANS[planForm.templateId];
+        // Solo se guarda como "override" lo que realmente difiere de la plantilla —
+        // así, si el Maestro no toca nada, el usuario queda limpio (sin personalizar)
+        // y si ajusta un solo campo, solo ese campo queda marcado como personalizado.
+        const boolKeys = ["hasContractPDF", "hasStatementPDF", "hasFrenchAmortization", "hasAmortizationTable", "hasAdvancedReports", "hasExport", "hasCustomBranding"] as const;
+        const numKeys = ["maxClients", "maxActiveLoans", "maxPaymentHistory"] as const;
+        const payload: any = { subscriptionPlan: planForm.templateId };
+        for (const k of boolKeys) payload[k] = planForm[k] === base[k] ? null : planForm[k];
+        for (const k of numKeys) payload[k] = planForm[k] === base[k] ? null : planForm[k];
+        payload.planPrice = planForm.planPrice.trim() === "" ? null : Number(planForm.planPrice);
+
         const res = await fetch(`/api/superadmin/users/${selectedUser.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscriptionPlan: selectedPlan }),
+            body: JSON.stringify(payload),
         });
         if (res.ok) {
-            showMsg(`Plan actualizado a ${getPlan(selectedPlan).name}`);
+            showMsg("Plan actualizado");
             setModal(null); fetchAll();
         } else {
             showMsg("Error al actualizar el plan", "error");
@@ -336,12 +443,12 @@ export default function SuperadminDashboard() {
                                             {u.role === "superadmin" ? (
                                                 <span className="sa-badge badge-super">Maestro</span>
                                             ) : (() => {
-                                                const p = getPlan(u.subscriptionPlan ?? "basic");
+                                                const p = resolveUserPlan(u);
                                                 return (
                                                     <button
                                                         className="sa-plan-btn"
                                                         style={{ borderColor: p.color + "55", color: p.color }}
-                                                        onClick={() => { setSelectedUser(u); setSelectedPlan((u.subscriptionPlan ?? "basic") as PlanId); setModal("editPlan"); }}
+                                                        onClick={() => openEditPlan(u)}
                                                     >
                                                         <Zap size={11} /> {p.name}
                                                     </button>
@@ -428,20 +535,15 @@ export default function SuperadminDashboard() {
                                                     placeholder="809-000-0000" />
                                             </div>
                                         </div>
-                                        <div className="sa-form-row">
-                                            <div className="sa-form-group">
-                                                <label>Email de Acceso</label>
-                                                <input type="email" value={createForm.email}
-                                                    onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
-                                                    placeholder="contacto@empresa.com" required />
-                                            </div>
-                                            <div className="sa-form-group">
-                                                <label>Contraseña Inicial</label>
-                                                <input type="password" value={createForm.password}
-                                                    onChange={e => setCreateForm({ ...createForm, password: e.target.value })}
-                                                    placeholder="••••••••" required />
-                                            </div>
+                                        <div className="sa-form-group">
+                                            <label>Email de Acceso</label>
+                                            <input type="email" value={createForm.email}
+                                                onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                                                placeholder="contacto@empresa.com" required />
                                         </div>
+                                        <p className="sa-form-hint">
+                                            La contraseña se genera automáticamente y se le envía a este correo junto con la información del sistema — no hace falta que la escribas.
+                                        </p>
                                         <div className="sa-form-group">
                                             <label>Fecha de Expiración de Licencia (opcional)</label>
                                             <input type="date" value={createForm.licenseExpiresAt}
@@ -476,27 +578,90 @@ export default function SuperadminDashboard() {
                             {modal === "editPlan" && selectedUser && (
                                 <>
                                     <div className="sa-modal-header">
-                                        <div className="sa-modal-title"><Zap size={20} color="#a855f7" /> Cambiar Plan</div>
+                                        <div className="sa-modal-title"><Zap size={20} color="#a855f7" /> Plan Personalizado</div>
                                         <button className="sa-close-btn" onClick={() => setModal(null)}><X size={20} /></button>
                                     </div>
                                     <p className="sa-modal-sub">Plan de <strong>{selectedUser.name || selectedUser.email}</strong></p>
-                                    <form onSubmit={handleChangePlan} className="sa-form">
-                                        <div className="sa-plan-options">
+                                    <form onSubmit={handleChangePlan} className="sa-form sa-plan-form">
+                                        <div className="sa-plan-section-label">Plantilla rápida</div>
+                                        <div className="sa-template-row">
                                             {(["basic", "intermediate", "premium"] as PlanId[]).map(pid => {
                                                 const p = PLANS[pid];
+                                                const active = planForm.templateId === pid;
                                                 return (
-                                                    <label key={pid} className={`sa-plan-option ${selectedPlan === pid ? "selected" : ""}`} style={selectedPlan === pid ? { borderColor: p.color, background: p.color + "15" } : {}}>
-                                                        <input type="radio" name="plan" value={pid} checked={selectedPlan === pid} onChange={() => setSelectedPlan(pid)} />
-                                                        <div className="sa-plan-opt-body">
-                                                            <span className="sa-plan-opt-name" style={{ color: selectedPlan === pid ? p.color : undefined }}>{p.name}</span>
-                                                            <span className="sa-plan-opt-desc">{p.tagline}</span>
-                                                            <span className="sa-plan-opt-price">{p.price}{p.priceNote}</span>
-                                                        </div>
-                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        key={pid}
+                                                        className={`sa-template-btn ${active ? "selected" : ""}`}
+                                                        style={active ? { borderColor: p.color, background: p.color + "15", color: p.color } : {}}
+                                                        onClick={() => applyPlanTemplate(pid)}
+                                                    >
+                                                        {p.name}
+                                                    </button>
                                                 );
                                             })}
                                         </div>
-                                        <button type="submit" className="sa-btn-primary">Aplicar Plan</button>
+                                        <p className="sa-form-hint" style={{ margin: 0 }}>
+                                            Elegir una plantilla rellena los campos abajo — luego puedes ajustar lo que quieras.
+                                        </p>
+
+                                        <div className="sa-plan-section-label">Límites</div>
+                                        <div className="sa-limit-grid">
+                                            {LIMIT_FIELDS.map(({ key, label }) => {
+                                                const unlimited = planForm[key] === -1;
+                                                return (
+                                                    <div key={key} className="sa-limit-row">
+                                                        <span className="sa-limit-label">{label}</span>
+                                                        <div className="sa-limit-controls">
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                disabled={unlimited}
+                                                                value={unlimited ? "" : planForm[key]}
+                                                                placeholder={unlimited ? "Ilimitado" : "0"}
+                                                                onChange={e => setPlanForm(f => ({ ...f, [key]: Number(e.target.value) }))}
+                                                            />
+                                                            <label className="sa-unlimited-check">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={unlimited}
+                                                                    onChange={e => setPlanForm(f => ({ ...f, [key]: e.target.checked ? -1 : PLANS[f.templateId][key] === -1 ? 10 : PLANS[f.templateId][key] }))}
+                                                                />
+                                                                Ilimitado
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <div className="sa-plan-section-label">Funciones incluidas</div>
+                                        <div className="sa-feature-grid">
+                                            {FEATURE_TOGGLES.map(({ key, label }) => (
+                                                <label key={key} className="sa-feature-check">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={planForm[key]}
+                                                        onChange={e => setPlanForm(f => ({ ...f, [key]: e.target.checked }))}
+                                                    />
+                                                    {label}
+                                                </label>
+                                            ))}
+                                        </div>
+
+                                        <div className="sa-plan-section-label">Precio mensual (RD$)</div>
+                                        <div className="sa-form-group">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                value={planForm.planPrice}
+                                                placeholder={PLANS[planForm.templateId].price.replace(/[^\d]/g, "")}
+                                                onChange={e => setPlanForm(f => ({ ...f, planPrice: e.target.value }))}
+                                            />
+                                            <span className="sa-form-hint">Déjalo vacío para usar el precio del plan {PLANS[planForm.templateId].name}.</span>
+                                        </div>
+
+                                        <button type="submit" className="sa-btn-primary">Guardar Plan</button>
                                     </form>
                                 </>
                             )}
@@ -542,7 +707,7 @@ const SA_STYLES = `
 .sa-title-box { display: flex; align-items: center; gap: 1rem; }
 .sa-title-box h1 { font-size: 1.9rem; font-weight: 800; color: var(--text-main); margin: 0; }
 .sa-title-box p  { color: rgba(var(--edge-rgb), 0.4); font-size: 0.9rem; margin: 0; }
-.sa-btn-new { display: flex; align-items: center; gap: 0.6rem; background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(79,70,229,0.3); }
+.sa-btn-new { display: flex; align-items: center; gap: 0.6rem; background: #7c3aed; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(79,70,229,0.3); }
 .sa-btn-new:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(79,70,229,0.4); }
 
 /* KPI Grid */
@@ -612,7 +777,7 @@ const SA_STYLES = `
 
 /* Modal */
 .sa-modal-backdrop { position: fixed; inset: 0; background: var(--modal-backdrop); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
-.sa-modal { width: 100%; max-width: 600px; padding: 2rem; background: var(--bg-surface-95); border-color: rgba(var(--edge-rgb), 0.1); }
+.sa-modal { width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; padding: 2rem; background: var(--bg-surface-95); border-color: rgba(var(--edge-rgb), 0.1); }
 .sa-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .sa-modal-title { display: flex; align-items: center; gap: 0.75rem; font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
 .sa-close-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; transition: color 0.2s; }
@@ -627,24 +792,39 @@ const SA_STYLES = `
 .sa-form-group label { font-size: 0.78rem; font-weight: 600; color: rgba(var(--edge-rgb), 0.5); text-transform: uppercase; letter-spacing: 0.04em; }
 .sa-form-group input { background: var(--bg-surface-6); border: 1px solid rgba(var(--edge-rgb), 0.1); padding: 0.75rem 1rem; border-radius: 10px; color: var(--text-main); font-size: 0.92rem; outline: none; transition: all 0.2s; }
 .sa-form-group input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129,140,248,0.12); }
+.sa-form-hint { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; margin: -0.5rem 0 0.25rem; }
 .sa-form-hint { font-size: 0.75rem; color: var(--text-faint); }
-.sa-btn-primary { background: linear-gradient(135deg,#4f46e5,#7c3aed); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; transition: all 0.2s; }
+.sa-btn-primary { background: #7c3aed; color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; transition: all 0.2s; }
 .sa-btn-primary:hover { transform: translateY(-1px); }
-.sa-btn-warning { background: linear-gradient(135deg,#d97706,#b45309); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
-.sa-btn-success { background: linear-gradient(135deg,#059669,#047857); color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+.sa-btn-warning { background: #b45309; color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
+.sa-btn-success { background: #047857; color: white; border: none; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; margin-top: 0.5rem; }
 
 /* Plan button in table */
 .sa-plan-btn { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(var(--edge-rgb), 0.04); border: 1px solid; padding: 0.3rem 0.7rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; text-transform: uppercase; letter-spacing: 0.04em; }
 .sa-plan-btn:hover { opacity: 0.75; }
 
-/* Plan options in modal */
-.sa-plan-options { display: flex; flex-direction: column; gap: 0.75rem; }
-.sa-plan-option { display: flex; align-items: center; gap: 1rem; border: 1px solid rgba(var(--edge-rgb), 0.08); border-radius: 12px; padding: 1rem 1.25rem; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.2); }
-.sa-plan-option input[type="radio"] { accent-color: #a855f7; width: 16px; height: 16px; flex-shrink: 0; }
-.sa-plan-opt-body { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
-.sa-plan-opt-name { font-weight: 700; font-size: 0.95rem; color: var(--text-main); }
-.sa-plan-opt-desc { font-size: 0.78rem; color: var(--text-dim); }
-.sa-plan-opt-price { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); margin-top: 0.25rem; }
+/* Plan personalizado — modal */
+.sa-plan-form { gap: 0.85rem; }
+.sa-plan-section-label { font-size: 0.72rem; font-weight: 800; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.4rem; }
+.sa-plan-section-label:first-of-type { margin-top: 0; }
+
+.sa-template-row { display: flex; gap: 0.6rem; }
+.sa-template-btn { flex: 1; border: 1px solid rgba(var(--edge-rgb), 0.1); background: rgba(var(--edge-rgb), 0.03); color: var(--text-muted); padding: 0.6rem 0.5rem; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+.sa-template-btn:hover { background: rgba(var(--edge-rgb), 0.06); }
+.sa-template-btn.selected { font-weight: 800; }
+
+.sa-limit-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+.sa-limit-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: rgba(var(--edge-rgb), 0.03); border: 1px solid rgba(var(--edge-rgb), 0.07); border-radius: 10px; padding: 0.65rem 0.9rem; }
+.sa-limit-label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+.sa-limit-controls { display: flex; align-items: center; gap: 0.75rem; }
+.sa-limit-controls input[type="number"] { width: 84px; background: var(--bg-surface-6); border: 1px solid rgba(var(--edge-rgb), 0.1); padding: 0.4rem 0.6rem; border-radius: 8px; color: var(--text-main); font-size: 0.88rem; outline: none; }
+.sa-limit-controls input[type="number"]:disabled { opacity: 0.5; }
+.sa-unlimited-check { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-dim); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.sa-unlimited-check input { accent-color: #a855f7; }
+
+.sa-feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem 1rem; }
+.sa-feature-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; cursor: pointer; background: rgba(var(--edge-rgb), 0.03); border: 1px solid rgba(var(--edge-rgb), 0.07); border-radius: 10px; padding: 0.6rem 0.8rem; }
+.sa-feature-check input { accent-color: #a855f7; width: 15px; height: 15px; flex-shrink: 0; }
 
 .sa-spinner { width: 40px; height: 40px; border: 3px solid rgba(var(--edge-rgb), 0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -659,6 +839,8 @@ const SA_STYLES = `
     .sa-search-box { min-width: 0; }
     .sa-form-row { grid-template-columns: 1fr; }
     .sa-table th, .sa-table td { padding: 0.75rem 1rem; }
+    .sa-feature-grid { grid-template-columns: 1fr; }
+    .sa-template-row { flex-direction: column; }
 }
 @media (max-width: 480px) { .sa-kpi-grid { grid-template-columns: 1fr; } }
 `;

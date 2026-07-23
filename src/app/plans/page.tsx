@@ -27,7 +27,9 @@ const FEATURE_ROWS = [
 
 export default function PlansPage() {
   const router = useRouter();
-  const { subscriptionPlan: currentPlan, loading } = useUserPlan();
+  const { subscriptionPlan: currentPlan, plan: myPlan, loading } = useUserPlan();
+  const isCustomPlan = myPlan.id === "custom";
+  const isCurrentPlanId = (planId: PlanId) => !isCustomPlan && currentPlan === planId;
   const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
 
   const planIcons: Record<PlanId, React.ReactNode> = {
@@ -69,11 +71,47 @@ export default function PlansPage() {
         </motion.div>
       </div>
 
+      {/* Plan personalizado activo */}
+      {isCustomPlan && !loading && (
+        <motion.div
+          className="custom-plan-banner"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="custom-plan-head">
+            <div className="custom-plan-badge"><Zap size={14} /> Tu plan actual</div>
+            <h3 className="custom-plan-name">Plan Personalizado</h3>
+            <p className="custom-plan-price">{myPlan.price}{myPlan.priceNote}</p>
+          </div>
+          <ul className="custom-plan-features">
+            {FEATURE_ROWS.map((row) => {
+              const val = (myPlan as any)[row.key];
+              return (
+                <li key={row.key} className="custom-feature-row">
+                  <span className="feature-icon">{row.icon}</span>
+                  <span className="feature-label">{row.label}</span>
+                  <span className="feature-value">
+                    {row.type === "limit" ? (
+                      <span className="limit-badge">{formatLimit(val as number)}</span>
+                    ) : val ? (
+                      <Check size={14} className="check-icon" />
+                    ) : (
+                      <X size={14} className="x-icon" />
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </motion.div>
+      )}
+
       {/* Cards de planes */}
       <div className="plans-grid">
         {PLAN_ORDER.map((planId, idx) => {
           const plan = PLANS[planId];
-          const isCurrentPlan = currentPlan === planId;
+          const isCurrentPlan = isCurrentPlanId(planId);
           const isPremium = planId === "premium";
           const isAnnual = billing === "annual";
 
@@ -158,7 +196,7 @@ export default function PlansPage() {
               ) : (
                 <button
                   className="plan-btn"
-                  style={{ background: plan.gradient, borderColor: plan.color }}
+                  style={{ background: plan.color, borderColor: plan.color }}
                   onClick={() => router.push("/subscription")}
                 >
                   Contratar {billing === "annual" ? "anual" : "mensual"} <ArrowRight size={16} />
@@ -183,9 +221,9 @@ export default function PlansPage() {
               <tr>
                 <th className="compare-feature-col">Característica</th>
                 {PLAN_ORDER.map(planId => (
-                  <th key={planId} className={currentPlan === planId ? "col-current" : ""}>
+                  <th key={planId} className={isCurrentPlanId(planId) ? "col-current" : ""}>
                     <span style={{ color: PLANS[planId].color }}>{PLANS[planId].name}</span>
-                    {currentPlan === planId && <span className="col-current-badge">Actual</span>}
+                    {isCurrentPlanId(planId) && <span className="col-current-badge">Actual</span>}
                   </th>
                 ))}
               </tr>
@@ -200,7 +238,7 @@ export default function PlansPage() {
                   {PLAN_ORDER.map(planId => {
                     const val = (PLANS[planId] as any)[row.key];
                     return (
-                      <td key={planId} className={`value-col ${currentPlan === planId ? "col-current" : ""}`}>
+                      <td key={planId} className={`value-col ${isCurrentPlanId(planId) ? "col-current" : ""}`}>
                         {row.type === "limit" ? (
                           <span className="table-limit">{formatLimit(val as number)}</span>
                         ) : val ? (
@@ -216,7 +254,7 @@ export default function PlansPage() {
               <tr className="row-price">
                 <td className="feature-col"><strong>Precio {billing === "annual" ? "anual" : "mensual"}</strong></td>
                 {PLAN_ORDER.map(planId => (
-                  <td key={planId} className={`value-col ${currentPlan === planId ? "col-current" : ""}`}>
+                  <td key={planId} className={`value-col ${isCurrentPlanId(planId) ? "col-current" : ""}`}>
                     <strong style={{ color: PLANS[planId].color }}>
                       {billing === "annual"
                         ? `${PLANS[planId].priceAnnual}${PLANS[planId].priceAnnualNote}`
@@ -313,7 +351,7 @@ export default function PlansPage() {
           box-shadow: 0 2px 8px rgba(99,102,241,0.2);
         }
         .billing-save-tag {
-          background: linear-gradient(135deg, #10b981, #059669);
+          background: #059669;
           color: white;
           font-size: 0.7rem;
           font-weight: 700;
@@ -321,6 +359,41 @@ export default function PlansPage() {
           border-radius: 99px;
           white-space: nowrap;
         }
+
+        /* Plan personalizado */
+        .custom-plan-banner {
+          background: var(--bg-featured);
+          border: 1px solid rgba(99,102,241,0.3);
+          border-radius: 20px;
+          padding: 2rem;
+          margin-bottom: 3rem;
+        }
+        .custom-plan-head { margin-bottom: 1.5rem; }
+        .custom-plan-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: #4f46e5;
+          color: white;
+          padding: 0.25rem 0.8rem;
+          border-radius: 99px;
+          font-size: 0.72rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 0.75rem;
+        }
+        .custom-plan-name { font-size: 1.5rem; font-weight: 800; color: var(--text-main); margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+        .custom-plan-price { font-size: 1.1rem; font-weight: 700; color: #818cf8; margin: 0; }
+        .custom-plan-features {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.75rem 2rem;
+        }
+        .custom-feature-row { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; color: var(--text-tertiary); }
 
         .plans-grid {
           display: grid;
@@ -553,7 +626,7 @@ export default function PlansPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
+          background: #a855f7;
           color: white;
           border: none;
           padding: 0.85rem 2rem;
@@ -571,6 +644,7 @@ export default function PlansPage() {
           .compare-table-wrapper { overflow-x: auto; }
           .compare-table { min-width: 550px; }
           .feature-col { display: table-cell !important; }
+          .custom-plan-features { grid-template-columns: 1fr; }
         }
       `}} />
     </div>

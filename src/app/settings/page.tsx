@@ -569,7 +569,7 @@ const SETTINGS_STYLES = `
 .plan-gate-block h2 { font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin: 0; }
 .plan-gate-block p { color: var(--text-dim); font-size: 0.92rem; line-height: 1.6; margin: 0; }
 .plan-gate-block p strong { color: #3b82f6; }
-.plan-gate-btn { display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg,#7c3aed,#a855f7); color: white; border: none; padding: 0.75rem 1.75rem; border-radius: 12px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s; }
+.plan-gate-btn { display: flex; align-items: center; gap: 0.5rem; background: #7c3aed; color: white; border: none; padding: 0.75rem 1.75rem; border-radius: 12px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s; }
 .plan-gate-btn:hover { opacity: 0.85; }
 
 /* Grid */

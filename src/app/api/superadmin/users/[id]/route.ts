@@ -23,8 +23,20 @@ export async function PUT(
         if (body.name     !== undefined) safeData.name     = body.name;
         if (body.newPassword) safeData.password = await hash(body.newPassword, 12);
 
+        // ── Campos de personalización del plan por usuario ──
+        // Se aceptan explícitamente en null para poder "resetear" un override y que
+        // vuelva a heredar el valor de la plantilla (subscriptionPlan).
+        const PLAN_OVERRIDE_FIELDS = [
+            "maxClients", "maxActiveLoans", "maxPaymentHistory",
+            "hasContractPDF", "hasStatementPDF", "hasFrenchAmortization",
+            "hasAmortizationTable", "hasAdvancedReports", "hasExport",
+            "hasCustomBranding", "planPrice",
+        ] as const;
+
         // ── Campos NUEVOS que requieren "npx prisma generate" ──
-        const hasNewFields = body.phone !== undefined || body.licenseExpiresAt !== undefined || body.subscriptionPlan !== undefined;
+        const hasNewFields = body.phone !== undefined || body.licenseExpiresAt !== undefined
+            || body.subscriptionPlan !== undefined
+            || PLAN_OVERRIDE_FIELDS.some((k) => body[k] !== undefined);
 
         if (hasNewFields) {
             const newFieldsData: any = { ...safeData };
@@ -34,6 +46,9 @@ export async function PUT(
                 newFieldsData.licenseExpiresAt = body.licenseExpiresAt
                     ? new Date(body.licenseExpiresAt)
                     : null;
+            }
+            for (const key of PLAN_OVERRIDE_FIELDS) {
+                if (body[key] !== undefined) newFieldsData[key] = body[key];
             }
 
             try {
@@ -98,5 +113,14 @@ function userToJSON(u: any) {
     return {
         id: u.id, name: u.name, email: u.email,
         role: u.role, isActive: u.isActive, createdAt: u.createdAt,
+        phone: u.phone ?? null, licenseExpiresAt: u.licenseExpiresAt ?? null,
+        subscriptionPlan: u.subscriptionPlan ?? "basic",
+        maxClients: u.maxClients ?? null, maxActiveLoans: u.maxActiveLoans ?? null,
+        maxPaymentHistory: u.maxPaymentHistory ?? null,
+        hasContractPDF: u.hasContractPDF ?? null, hasStatementPDF: u.hasStatementPDF ?? null,
+        hasFrenchAmortization: u.hasFrenchAmortization ?? null,
+        hasAmortizationTable: u.hasAmortizationTable ?? null,
+        hasAdvancedReports: u.hasAdvancedReports ?? null, hasExport: u.hasExport ?? null,
+        hasCustomBranding: u.hasCustomBranding ?? null, planPrice: u.planPrice ?? null,
     };
 }

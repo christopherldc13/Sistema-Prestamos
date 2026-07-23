@@ -1,7 +1,7 @@
 export type PlanId = "basic" | "intermediate" | "premium";
 
 export interface PlanFeatures {
-  id: PlanId;
+  id: PlanId | "custom";
   name: string;
   tagline: string;
   // Límites numéricos (-1 = ilimitado)
@@ -26,7 +26,6 @@ export interface PlanFeatures {
   priceAnnualNote: string;
   priceAnnualSaving: string;
   color: string;
-  gradient: string;
   badge?: string;
 }
 
@@ -45,13 +44,12 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasAdvancedReports: false,
     hasExport: false,
     hasCustomBranding: false,
-    price: "RD$ 800",
+    price: "RD$ 500",
     priceNote: "/mes",
-    priceAnnual: "RD$ 8,000",
+    priceAnnual: "RD$ 5,000",
     priceAnnualNote: "/año",
-    priceAnnualSaving: "Ahorras RD$ 1,600",
+    priceAnnualSaving: "Ahorras RD$ 1,000",
     color: "#6b7280",
-    gradient: "linear-gradient(135deg, #374151, #4b5563)",
   },
   intermediate: {
     id: "intermediate",
@@ -67,13 +65,12 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasAdvancedReports: true,
     hasExport: false,
     hasCustomBranding: true,
-    price: "RD$ 1,500",
+    price: "RD$ 950",
     priceNote: "/mes",
-    priceAnnual: "RD$ 15,000",
+    priceAnnual: "RD$ 9,500",
     priceAnnualNote: "/año",
-    priceAnnualSaving: "Ahorras RD$ 3,000",
+    priceAnnualSaving: "Ahorras RD$ 1,900",
     color: "#3b82f6",
-    gradient: "linear-gradient(135deg, #1d4ed8, #3b82f6)",
     badge: "Popular",
   },
   premium: {
@@ -90,13 +87,12 @@ export const PLANS: Record<PlanId, PlanFeatures> = {
     hasAdvancedReports: true,
     hasExport: true,
     hasCustomBranding: true,
-    price: "RD$ 3,000",
+    price: "RD$ 1,800",
     priceNote: "/mes",
-    priceAnnual: "RD$ 30,000",
+    priceAnnual: "RD$ 18,000",
     priceAnnualNote: "/año",
-    priceAnnualSaving: "Ahorras RD$ 6,000",
+    priceAnnualSaving: "Ahorras RD$ 3,600",
     color: "#a855f7",
-    gradient: "linear-gradient(135deg, #7c3aed, #a855f7)",
     badge: "Pro",
   },
 };
@@ -107,4 +103,77 @@ export function getPlan(planId: string): PlanFeatures {
 
 export function formatLimit(limit: number): string {
   return limit === -1 ? "Ilimitado" : String(limit);
+}
+
+// ── Personalización por usuario ──
+// Un usuario puede desviarse de su plantilla (subscriptionPlan) en cualquiera de estos
+// campos. Si el campo es null/undefined en la base de datos, se hereda el valor de la
+// plantilla. Esto mantiene compatibilidad total con usuarios existentes (todos los campos
+// de override en null = se comportan exactamente como su plan de siempre).
+export const PLAN_OVERRIDE_KEYS = [
+  "maxClients",
+  "maxActiveLoans",
+  "maxPaymentHistory",
+  "hasContractPDF",
+  "hasStatementPDF",
+  "hasFrenchAmortization",
+  "hasAmortizationTable",
+  "hasAdvancedReports",
+  "hasExport",
+  "hasCustomBranding",
+] as const;
+
+export type PlanOverrideKey = (typeof PLAN_OVERRIDE_KEYS)[number];
+
+export interface UserPlanOverrides {
+  maxClients?: number | null;
+  maxActiveLoans?: number | null;
+  maxPaymentHistory?: number | null;
+  hasContractPDF?: boolean | null;
+  hasStatementPDF?: boolean | null;
+  hasFrenchAmortization?: boolean | null;
+  hasAmortizationTable?: boolean | null;
+  hasAdvancedReports?: boolean | null;
+  hasExport?: boolean | null;
+  hasCustomBranding?: boolean | null;
+  planPrice?: number | null;
+}
+
+/**
+ * Resuelve el plan real de un usuario: parte de la plantilla (subscriptionPlan) y aplica
+ * cualquier override individual que el Maestro haya configurado para ese usuario.
+ * Si hay al menos un override activo, el plan resultante se marca como "Personalizado".
+ */
+export function resolveUserPlan(
+  user: { subscriptionPlan?: string | null } & UserPlanOverrides
+): PlanFeatures {
+  const base = getPlan(user.subscriptionPlan ?? "basic");
+  const isCustom = PLAN_OVERRIDE_KEYS.some(
+    (key) => user[key] !== null && user[key] !== undefined
+  );
+
+  const resolved: PlanFeatures = { ...base };
+  for (const key of PLAN_OVERRIDE_KEYS) {
+    const value = user[key];
+    if (value !== null && value !== undefined) {
+      (resolved as any)[key] = value;
+    }
+  }
+
+  if (user.planPrice !== null && user.planPrice !== undefined) {
+    resolved.price = `RD$ ${user.planPrice.toLocaleString("es-DO")}`;
+    resolved.priceNote = "/mes";
+    resolved.priceAnnual = "—";
+    resolved.priceAnnualNote = "";
+    resolved.priceAnnualSaving = "";
+  }
+
+  if (isCustom) {
+    resolved.id = "custom";
+    resolved.name = "Personalizado";
+    resolved.tagline = "Plan a la medida configurado por el administrador";
+    resolved.badge = undefined;
+  }
+
+  return resolved;
 }

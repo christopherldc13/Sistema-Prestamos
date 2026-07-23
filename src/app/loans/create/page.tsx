@@ -488,7 +488,7 @@ export default function CreateLoanPage() {
         .total-focus .p-label { color: var(--text-tertiary); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; }
         .p-value-total { color: #6366f1; font-size: 2rem; font-weight: 900; }
 
-        .suggested-box { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.02)); padding: 1.25rem; border-radius: 14px; border: 1px solid rgba(16,185,129,0.1); }
+        .suggested-box { background: rgba(16,185,129,0.06); padding: 1.25rem; border-radius: 14px; border: 1px solid rgba(16,185,129,0.1); }
         .suggest-header { font-size: 0.7rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
         .suggest-val { font-size: 2rem; font-weight: 900; color: var(--text-main); display: flex; align-items: baseline; gap: 0.25rem; }
         .suggest-val .cur { font-size: 1.1rem; color: #10b981; }

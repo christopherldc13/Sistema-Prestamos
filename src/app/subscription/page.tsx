@@ -20,7 +20,7 @@ export default function SubscriptionPage() {
       type: "Cuenta Corriente",
       accountNumber: "855402731",
       holder: "Christopher Lantigua de la Cruz",
-      gradient: "linear-gradient(135deg, #053b7c, #0d5ea6)",
+      bgColor: "#0d5ea6",
       logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
     },
     {
@@ -29,7 +29,7 @@ export default function SubscriptionPage() {
       type: "Cuenta de Ahorro",
       accountNumber: "852519743",
       holder: "Christopher Lantigua de la Cruz",
-      gradient: "linear-gradient(135deg, #064085, #116cb7)",
+      bgColor: "#116cb7",
       logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
     },
     {
@@ -38,7 +38,7 @@ export default function SubscriptionPage() {
       type: "Cuenta de Ahorro",
       accountNumber: "9607489377",
       holder: "Christopher Lantigua de la Cruz",
-      gradient: "linear-gradient(135deg, #00519a, #0076c8)",
+      bgColor: "#0076c8",
       logoUrl: "https://acceso.rexi.do/media/2222738/logos-br-rgb_2.png"
     },
     {
@@ -47,7 +47,7 @@ export default function SubscriptionPage() {
       type: "Cuenta Móvil (RD$)",
       accountNumber: "39599510017",
       holder: "Christopher Lantigua de la Cruz",
-      gradient: "linear-gradient(135deg, #0b6839, #159354)",
+      bgColor: "#159354",
       logoUrl: "https://sb.gob.do/media/lddpcf23/bhd.svg"
     },
     {
@@ -56,7 +56,7 @@ export default function SubscriptionPage() {
       type: "Cuenta en Pesos",
       accountNumber: "1000449179",
       holder: "Christopher Lantigua de la Cruz",
-      gradient: "linear-gradient(135deg, #242b3b, #323b4e)",
+      bgColor: "#323b4e",
       logoUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzKfAhr6u8-VOrYmy6EMT-gSO4WxUeB5mQsA&s"
     },
     {
@@ -66,7 +66,7 @@ export default function SubscriptionPage() {
       accountNumber: "410040044784",
       formattedNumber: "410040044784",
       holder: "Lantigua de la Cruz Christopher",
-      gradient: "linear-gradient(135deg, #004c8f, #0066b8)",
+      bgColor: "#0066b8",
       logoUrl: "https://alaver.com.do/wp-content/uploads/2025/04/alaver.jpg"
     }
   ];
@@ -102,7 +102,7 @@ export default function SubscriptionPage() {
       >
         {accounts.map(acc => (
           <motion.div key={acc.id} variants={itemVariants} className="bank-card-wrapper">
-            <div className="bank-card" style={{ background: acc.gradient }}>
+            <div className="bank-card" style={{ background: acc.bgColor }}>
               <div className="card-top">
                 <div className="bank-info">
                   <h3>{acc.bankName}</h3>
@@ -216,7 +216,7 @@ export default function SubscriptionPage() {
         .card-overlay {
           position: absolute;
           top: 0; right: 0; bottom: 0; left: 0;
-          background: linear-gradient(180deg, rgba(var(--edge-rgb), 0.05) 0%, rgba(var(--edge-rgb), 0) 100%);
+          background: rgba(var(--edge-rgb), 0.025);
           pointer-events: none;
         }
 

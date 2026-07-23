@@ -19,6 +19,21 @@ model User {
   phone              String?
   licenseExpiresAt   DateTime?
   subscriptionPlan   String     @default("basic")
+
+  // Personalización del plan por usuario — si un campo es null, se hereda el valor
+  // de la plantilla `subscriptionPlan` (ver resolveUserPlan en src/lib/plans.ts).
+  maxClients            Int?
+  maxActiveLoans        Int?
+  maxPaymentHistory     Int?
+  hasContractPDF        Boolean?
+  hasStatementPDF       Boolean?
+  hasFrenchAmortization Boolean?
+  hasAmortizationTable  Boolean?
+  hasAdvancedReports    Boolean?
+  hasExport             Boolean?
+  hasCustomBranding     Boolean?
+  planPrice             Float?
+
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -91,4 +106,15 @@ model Settings {
   user      User?    @relation(fields: [userId], references: [id])
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }

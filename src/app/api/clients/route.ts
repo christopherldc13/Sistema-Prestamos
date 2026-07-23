@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getPlan } from "@/lib/plans";
+import { resolveUserPlan } from "@/lib/plans";
 
 export async function GET() {
     try {
@@ -42,9 +42,14 @@ export async function POST(req: NextRequest) {
         try {
             const user = await (prisma.user.findUnique as any)({
                 where: { id: userId },
-                select: { subscriptionPlan: true },
+                select: {
+                    subscriptionPlan: true, maxClients: true, maxActiveLoans: true,
+                    maxPaymentHistory: true, hasContractPDF: true, hasStatementPDF: true,
+                    hasFrenchAmortization: true, hasAmortizationTable: true,
+                    hasAdvancedReports: true, hasExport: true, hasCustomBranding: true,
+                },
             });
-            const plan = getPlan(user?.subscriptionPlan ?? "basic");
+            const plan = resolveUserPlan(user ?? { subscriptionPlan: "basic" });
             if (plan.maxClients !== -1) {
                 const clientCount = await prisma.client.count({ where: { userId } });
                 if (clientCount >= plan.maxClients) {
