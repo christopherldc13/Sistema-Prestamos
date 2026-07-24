@@ -1,5 +1,5 @@
 export type TermUnit = "days" | "weeks" | "biweekly" | "months";
-export type RateFrequency = "daily" | "biweekly" | "monthly" | "annual";
+export type RateFrequency = "daily" | "weekly" | "biweekly" | "monthly" | "annual";
 export type InterestType = "simple" | "compound";
 
 export interface LoanParams {
@@ -52,6 +52,7 @@ export function getPeriodicRate(
     let dailyRate: number;
     switch (rateFrequency) {
         case "daily":   dailyRate = r; break;
+        case "weekly":  dailyRate = r / 7; break;
         case "biweekly": dailyRate = r / 15; break;
         case "monthly": dailyRate = r / 30; break;
         case "annual":  dailyRate = r / 365; break;

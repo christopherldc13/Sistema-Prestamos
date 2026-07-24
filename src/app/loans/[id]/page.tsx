@@ -357,7 +357,8 @@ export default function LoanDetailsPage() {
                         <span className="detail-pill">{loan.interestRate}%
                             {loan.rateFrequency === "monthly" ? " mensual" :
                              loan.rateFrequency === "annual" ? " anual" :
-                             loan.rateFrequency === "biweekly" ? " quincenal" : " diario"}
+                             loan.rateFrequency === "biweekly" ? " quincenal" :
+                             loan.rateFrequency === "weekly" ? " semanal" : " diario"}
                         </span>
                         <span className="detail-pill">{loan.term} {
                             loan.termUnit === "months" ? "meses" :

@@ -64,7 +64,7 @@ model Loan {
   user              User?     @relation(fields: [userId], references: [id])
   amount            Float
   interestRate      Float
-  rateFrequency     String    @default("monthly") // "daily" | "monthly" | "annual"
+  rateFrequency     String    @default("monthly") // "daily" | "weekly" | "biweekly" | "monthly" | "annual"
   status            String    @default("active")  // "active", "paid", "overdue"
   term              Int
   termUnit          String    // "days", "weeks", "months"

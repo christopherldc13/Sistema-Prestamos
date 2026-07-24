@@ -12,6 +12,6 @@ export const config = {
         "/clients/:path*",
         "/loans/:path*",
         "/reports/:path*",
-        "/((?!api|login|forgot-password|reset-password|_next/static|_next/image|favicon.ico).*)",
+        "/((?!api|login|forgot-password|reset-password|_next/static|_next/image|favicon.ico|$).*)",
     ]
 };

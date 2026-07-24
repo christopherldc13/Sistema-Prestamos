@@ -101,8 +101,10 @@ const termUnitLabel = (u: string, n: number) => {
 };
 
 const rateFreqLabel = (f: string) => {
-    if (f === "annual")  return "Anual";
-    if (f === "daily")   return "Diaria";
+    if (f === "annual")   return "Anual";
+    if (f === "daily")    return "Diaria";
+    if (f === "weekly")   return "Semanal";
+    if (f === "biweekly") return "Quincenal";
     return "Mensual";
 };
 
@@ -166,41 +168,37 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
         ? new Date(loan.dueDate)
         : calcDueDate(new Date(loan.startDate), loan.term, loan.termUnit);
 
-    let y = 20;
+    let y = 16;
 
-    // ── Accent bar (top) ─────────────────────────────────────
-    doc.setFillColor(30, 41, 82);
-    doc.rect(0, 0, 210, 12, "F");
+    // ── Brand label (plain, no colored banner) ────────────────
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.text(config.brand.toUpperCase(), 105, 7.5, { align: "center" });
+    doc.setTextColor(130, 130, 130);
+    doc.text(config.brand.toUpperCase(), 105, y, { align: "center" });
     doc.setTextColor(0, 0, 0);
 
-    y = 22;
+    y += 10;
 
     // ── Company Header ───────────────────────────────────────
     doc.setFont("times", "bold");
     doc.setFontSize(20);
-    doc.setTextColor(30, 41, 82);
+    doc.setTextColor(20, 20, 20);
     doc.text(config.name.toUpperCase(), 105, y, { align: "center" });
 
     y += 7;
     doc.setFont("times", "italic");
     doc.setFontSize(10);
-    doc.setTextColor(80, 80, 100);
+    doc.setTextColor(90, 90, 90);
     doc.text(config.slogan, 105, y, { align: "center" });
 
     y += 5;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.setTextColor(100, 100, 100);
+    doc.setTextColor(110, 110, 110);
     doc.text(`${config.address}  ·  Tel. ${config.phone}`, 105, y, { align: "center" });
 
     y += 6;
-    a4ColorLine(doc, y, 30, 41, 82, 1.2);
-    y += 2;
-    a4ColorLine(doc, y, 200, 170, 80, 0.4);
+    a4ColorLine(doc, y, 60, 60, 60, 0.6);
 
     // ── Document Title ───────────────────────────────────────
     y += 12;
@@ -219,15 +217,15 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     y += 10;
     const boxX = A4_L;
     const boxH = 42;
-    doc.setFillColor(245, 247, 255);
-    doc.setDrawColor(190, 200, 230);
+    doc.setFillColor(246, 246, 246);
+    doc.setDrawColor(215, 215, 215);
     doc.setLineWidth(0.3);
     doc.roundedRect(boxX, y, A4_CW, boxH, 3, 3, "FD");
 
     // Box title
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
-    doc.setTextColor(30, 41, 82);
+    doc.setTextColor(60, 60, 60);
     doc.text("RESUMEN DEL CRÉDITO", boxX + 5, y + 6);
 
     // Two columns inside the box
@@ -243,7 +241,7 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
         doc.text(lbl, cx, cyRef);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(highlight ? 9.5 : 8.5);
-        doc.setTextColor(highlight ? 30 : 20, highlight ? 41 : 20, highlight ? 82 : 20);
+        doc.setTextColor(highlight ? 0 : 40, highlight ? 0 : 40, highlight ? 0 : 40);
         doc.text(val, cx + 55, cyRef, { align: "right" });
     };
 
@@ -270,11 +268,13 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     y += boxH + 4;
 
     // Type badge
-    doc.setFillColor(30, 41, 82);
-    doc.roundedRect(A4_L, y, 60, 6.5, 1.5, 1.5, "F");
+    doc.setFillColor(235, 235, 235);
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(A4_L, y, 60, 6.5, 1.5, 1.5, "FD");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(40, 40, 40);
     doc.text(interestTypeLabel(loan.interestType).toUpperCase(), A4_L + 30, y + 4.2, { align: "center" });
     doc.setTextColor(0, 0, 0);
 
@@ -355,7 +355,7 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
         if (y > 255) { doc.addPage(); y = 25; }
         doc.setFont("times", "bold");
         doc.setFontSize(10.5);
-        doc.setTextColor(30, 41, 82);
+        doc.setTextColor(20, 20, 20);
         doc.text(clause.title, A4_L, y);
         y += 6;
 
@@ -373,12 +373,12 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     doc.setFont("times", "normal");
     doc.setFontSize(10.5);
     doc.setTextColor(30, 30, 30);
-    doc.text(
-        `En fe de lo cual, se firma en la ciudad indicada, ${fnDateLongTexts(today)}.`,
-        A4_L, y
-    );
+    const closingText = `En fe de lo cual, se firma en la ciudad indicada, ${fnDateLongTexts(today)}.`;
+    const closingLines = doc.splitTextToSize(closingText, A4_CW);
+    doc.text(closingText, A4_L, y, { align: "justify", maxWidth: A4_CW });
+    y += closingLines.length * 5.8;
 
-    y += 30;
+    y += 24;
     const sigLW = 70;
 
     // Left signature
@@ -387,7 +387,7 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     doc.line(A4_L, y, A4_L + sigLW, y);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(30, 41, 82);
+    doc.setTextColor(20, 20, 20);
     doc.text(config.name.toUpperCase(), A4_L + sigLW / 2, y + 5.5, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -400,7 +400,7 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     doc.line(A4_R - sigLW, y, A4_R, y);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.setTextColor(30, 41, 82);
+    doc.setTextColor(20, 20, 20);
     doc.text(loan.client.fullName.toUpperCase(), A4_R - sigLW / 2, y + 5.5, { align: "center" });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -411,11 +411,11 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setFillColor(245, 247, 255);
+        doc.setFillColor(247, 247, 247);
         doc.rect(0, 285, 210, 12, "F");
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
-        doc.setTextColor(130, 130, 150);
+        doc.setTextColor(130, 130, 130);
         doc.text(`${config.name} · ${config.address} · Tel. ${config.phone}`, 105, 290, { align: "center" });
         doc.text(`Contrato No. ${loanNo} · Página ${i} de ${pageCount}`, 105, 294, { align: "center" });
     }

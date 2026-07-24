@@ -55,7 +55,7 @@ export function Navbar() {
       <nav className="glass-nav">
         <div className="nav-container">
           {/* Brand */}
-          <Link href="/" className="nav-brand">Fact-Prest</Link>
+          <Link href="/dashboard" className="nav-brand">Fact-Prest</Link>
 
           {/* Desktop primary links */}
           <ul className="nav-links desktop-only">
@@ -63,7 +63,7 @@ export function Navbar() {
               <li><Link href="/superadmin"><LayoutDashboard size={17} /> Panel Maestro</Link></li>
             ) : (
               <>
-                <li><Link href="/"><LayoutDashboard size={17} /> Dashboard</Link></li>
+                <li><Link href="/dashboard"><LayoutDashboard size={17} /> Dashboard</Link></li>
                 <li><Link href="/clients"><Users size={17} /> Clientes</Link></li>
                 <li><Link href="/loans"><CreditCard size={17} /> Préstamos</Link></li>
                 <li><Link href="/reports"><BarChart3 size={17} /> Reportes</Link></li>
@@ -126,29 +126,29 @@ export function Navbar() {
                     <div className="dd-info">
                       <p className="dd-name">{session.user?.name || "Admin"}</p>
                       <p className="dd-role">{isSuperadmin ? "Super Admin" : "Administrador"}</p>
+                      {plan && !isSuperadmin && (
+                        <div className="dd-plan-badge" style={{ borderColor: plan.color + "50", color: plan.color }}>
+                          <Zap size={9} />{plan.name}
+                        </div>
+                      )}
                     </div>
-                    {plan && !isSuperadmin && (
-                      <div className="dd-plan-badge" style={{ borderColor: plan.color + "50", color: plan.color }}>
-                        <Zap size={9} />{plan.name}
-                      </div>
-                    )}
                   </div>
 
                   {!isSuperadmin && (
                     <div className="dd-group">
                       <div className="dd-section-label">Cuenta</div>
-                      <Link href="/plans" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-yellow"><Zap size={14} /></div>
+                      <Link href="/plans" className="dd-item" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "11px" }} onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-yellow" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><Zap size={14} /></div>
                         <span className="dd-item-text">Mis Planes</span>
                         <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
-                      <Link href="/subscription" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-green"><ShieldCheck size={14} /></div>
+                      <Link href="/subscription" className="dd-item" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "11px" }} onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-green" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><ShieldCheck size={14} /></div>
                         <span className="dd-item-text">Suscripción</span>
                         <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
-                      <Link href="/settings" className="dd-item" onClick={() => setUserMenuOpen(false)}>
-                        <div className="dd-icon dd-icon-slate"><Settings size={14} /></div>
+                      <Link href="/settings" className="dd-item" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: "11px" }} onClick={() => setUserMenuOpen(false)}>
+                        <div className="dd-icon dd-icon-slate" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}><Settings size={14} /></div>
                         <span className="dd-item-text">Configuración</span>
                         <ChevronRight size={13} className="dd-item-arrow" />
                       </Link>
@@ -180,7 +180,7 @@ export function Navbar() {
                 <li><Link href="/superadmin" onClick={() => setIsOpen(false)}><LayoutDashboard size={20} /> Panel Maestro</Link></li>
               ) : (
                 <>
-                  <li><Link href="/" onClick={() => setIsOpen(false)}><LayoutDashboard size={20} /> Dashboard</Link></li>
+                  <li><Link href="/dashboard" onClick={() => setIsOpen(false)}><LayoutDashboard size={20} /> Dashboard</Link></li>
                   <li><Link href="/clients" onClick={() => setIsOpen(false)}><Users size={20} /> Clientes</Link></li>
                   <li><Link href="/loans" onClick={() => setIsOpen(false)}><CreditCard size={20} /> Préstamos</Link></li>
                   <li><Link href="/reports" onClick={() => setIsOpen(false)}><BarChart3 size={20} /> Reportes</Link></li>
@@ -473,10 +473,7 @@ export function Navbar() {
             letter-spacing: 0.09em;
           }
           .dd-plan-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 3px;
             font-size: 0.6rem;
@@ -486,6 +483,8 @@ export function Navbar() {
             padding: 3px 7px;
             border-radius: 20px;
             border: 1px solid;
+            width: fit-content;
+            margin-top: 4px;
             background: var(--bg-surface-5);
           }
 

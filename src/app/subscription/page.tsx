@@ -24,15 +24,6 @@ export default function SubscriptionPage() {
       logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
     },
     {
-      id: "popular-ahorro",
-      bankName: "Banco Popular",
-      type: "Cuenta de Ahorro",
-      accountNumber: "852519743",
-      holder: "Christopher Lantigua de la Cruz",
-      bgColor: "#116cb7",
-      logoUrl: "https://popularenlinea.com/_catalogs/masterpage/popularenlinea/shared/images/BPD-logo.png"
-    },
-    {
       id: "banreservas",
       bankName: "Banreservas",
       type: "Cuenta de Ahorro",
@@ -65,7 +56,7 @@ export default function SubscriptionPage() {
       type: "Cuenta de Ahorro",
       accountNumber: "410040044784",
       formattedNumber: "410040044784",
-      holder: "Lantigua de la Cruz Christopher",
+      holder: "Christopher Lantigua de la Cruz",
       bgColor: "#0066b8",
       logoUrl: "https://alaver.com.do/wp-content/uploads/2025/04/alaver.jpg"
     }
@@ -102,19 +93,24 @@ export default function SubscriptionPage() {
       >
         {accounts.map(acc => (
           <motion.div key={acc.id} variants={itemVariants} className="bank-card-wrapper">
-            <div className="bank-card" style={{ background: acc.bgColor }}>
+            <div className="bank-card">
+              <div className="card-accent" style={{ background: acc.bgColor }} />
               <div className="card-top">
                 <div className="bank-info">
                   <h3>{acc.bankName}</h3>
-                  <span>{acc.type}</span>
+                  <span style={{ color: acc.bgColor }}>{acc.type}</span>
                 </div>
-                <img
-                  src={acc.logoUrl}
-                  alt={acc.bankName}
-                  className="bank-logo-img"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
+                <div className="bank-logo-wrap">
+                  <img
+                    src={acc.logoUrl}
+                    alt={acc.bankName}
+                    className="bank-logo-img"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
               </div>
+
+              <div className="card-divider" />
 
               <div className="card-middle">
                 <div>
@@ -126,7 +122,7 @@ export default function SubscriptionPage() {
                   onClick={() => copyToClipboard(acc.accountNumber, acc.id)}
                   title="Copiar número"
                 >
-                  {copiedAccount === acc.id ? <CheckCircle2 size={20} color="#4ade80" /> : <Copy size={20} />}
+                  {copiedAccount === acc.id ? <CheckCircle2 size={18} color="#16a34a" /> : <Copy size={18} />}
                 </button>
               </div>
 
@@ -134,8 +130,6 @@ export default function SubscriptionPage() {
                 <label>Beneficiario</label>
                 <p>{acc.holder}</p>
               </div>
-
-              <div className="card-overlay" />
             </div>
 
             {copiedAccount === acc.id && (
@@ -195,29 +189,30 @@ export default function SubscriptionPage() {
         }
 
         .bank-card {
-          border-radius: 20px;
+          background: var(--bg-card);
+          border-radius: 16px;
           padding: 1.75rem;
-          color: white;
+          color: var(--text-main);
           display: flex;
           flex-direction: column;
-          gap: 1.75rem;
+          gap: 1.5rem;
           position: relative;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-          border: 1px solid rgba(var(--edge-rgb), 0.05); /* Slight border for depth */
+          box-shadow: 0 1px 3px var(--shadow-soft);
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          border: 1px solid rgba(var(--edge-rgb), 0.08);
         }
 
         .bank-card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+          transform: translateY(-4px);
+          box-shadow: 0 16px 32px var(--shadow-soft);
+          border-color: rgba(var(--edge-rgb), 0.16);
         }
 
-        .card-overlay {
+        .card-accent {
           position: absolute;
-          top: 0; right: 0; bottom: 0; left: 0;
-          background: rgba(var(--edge-rgb), 0.025);
-          pointer-events: none;
+          top: 0; left: 0; right: 0;
+          height: 3px;
         }
 
         .card-top {
@@ -228,33 +223,44 @@ export default function SubscriptionPage() {
           z-index: 1;
         }
 
+        .bank-logo-wrap {
+          width: 52px;
+          height: 52px;
+          border-radius: 12px;
+          background: #ffffff;
+          border: 1px solid rgba(var(--edge-rgb), 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+
         .bank-logo-img {
-          width: 68px;
-          height: 68px;
+          width: 100%;
+          height: 100%;
           object-fit: contain;
-          border-radius: 14px;
-          background: white;
-          padding: 8px;
-          box-shadow: 0 6px 20px rgba(0,0,0,0.45);
-          border: 1px solid rgba(var(--edge-rgb), 0.1);
+          padding: 7px;
         }
 
         .bank-info h3 {
-          font-size: 1.35rem;
-          font-weight: 800;
-          margin: 0 0 0.25rem 0;
-          letter-spacing: -0.02em;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: var(--text-main);
+          margin: 0 0 0.35rem 0;
+          letter-spacing: -0.01em;
         }
 
         .bank-info span {
-          background: rgba(0,0,0,0.25);
-          padding: 0.25rem 0.6rem;
-          border-radius: 99px;
-          font-size: 0.75rem;
-          font-weight: 600;
+          font-size: 0.72rem;
+          font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.06em;
+        }
+
+        .card-divider {
+          height: 1px;
+          background: rgba(var(--edge-rgb), 0.07);
         }
 
         .card-middle {
@@ -263,43 +269,46 @@ export default function SubscriptionPage() {
           align-items: flex-end;
           position: relative;
           z-index: 1;
-          margin-top: 0.5rem;
         }
 
         .card-middle label, .card-bottom label {
           display: block;
-          font-size: 0.7rem;
+          font-size: 0.68rem;
+          font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: rgba(var(--edge-rgb), 0.6);
-          margin-bottom: 0.3rem;
+          letter-spacing: 0.07em;
+          color: var(--text-faint);
+          margin-bottom: 0.35rem;
         }
 
         .acc-number {
-          font-size: 1.5rem;
-          font-family: monospace;
+          font-size: 1.35rem;
+          font-family: 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
           font-weight: 600;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.03em;
+          color: var(--text-main);
           margin: 0;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .copy-btn {
-          background: rgba(var(--edge-rgb), 0.15);
-          border: none;
-          color: white;
-          width: 40px;
-          height: 40px;
+          background: rgba(var(--edge-rgb), 0.05);
+          border: 1px solid rgba(var(--edge-rgb), 0.1);
+          color: var(--text-muted);
+          width: 38px;
+          height: 38px;
           border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: background 0.2s, transform 0.1s;
+          transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.1s;
+          flex-shrink: 0;
         }
 
         .copy-btn:hover {
-          background: rgba(var(--edge-rgb), 0.25);
+          background: rgba(var(--edge-rgb), 0.09);
+          border-color: rgba(var(--edge-rgb), 0.18);
+          color: var(--text-main);
         }
 
         .copy-btn:active {
@@ -313,10 +322,10 @@ export default function SubscriptionPage() {
 
         .card-bottom p {
           margin: 0;
-          font-size: 1.05rem;
+          font-size: 0.95rem;
           font-weight: 600;
-          letter-spacing: 0.02em;
-          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          color: var(--text-secondary);
+          letter-spacing: 0.01em;
         }
 
         .copy-toast {

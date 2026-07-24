@@ -19,6 +19,7 @@ import { useUserPlan } from "@/components/UserPlanProvider";
 
 const RATE_FREQ_LABELS: Record<RateFrequency, string> = {
     daily: "Diaria",
+    weekly: "Semanal",
     biweekly: "Quincenal",
     monthly: "Mensual",
     annual: "Anual",
@@ -211,6 +212,7 @@ export default function CreateLoanPage() {
                                             onChange={e => setFormData({ ...formData, rateFrequency: e.target.value as RateFrequency })}
                                         >
                                             <option value="daily">% Diaria</option>
+                                            <option value="weekly">% Semanal</option>
                                             <option value="biweekly">% Quincenal</option>
                                             <option value="monthly">% Mensual</option>
                                             <option value="annual">% Anual</option>

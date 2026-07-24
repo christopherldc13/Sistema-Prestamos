@@ -171,7 +171,7 @@ export default function SuperadminDashboard() {
 
     useEffect(() => {
         if (status === "unauthenticated") router.push("/login");
-        if (session && (session.user as any).role !== "superadmin") router.push("/");
+        if (session && (session.user as any).role !== "superadmin") router.push("/dashboard");
         if (session && (session.user as any).role === "superadmin") {
             fetchAll();
         }

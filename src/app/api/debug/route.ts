@@ -8,6 +8,8 @@ export async function GET() {
             NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? "Set (length: " + process.env.NEXTAUTH_SECRET.length + ")" : "MISSING",
             DATABASE_URL: process.env.DATABASE_URL ? "Set (starts with " + process.env.DATABASE_URL.slice(0, 15) + "...)" : "MISSING",
             VERCEL_URL: process.env.VERCEL_URL || "MISSING",
+            GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "Set (ends with " + process.env.GOOGLE_CLIENT_ID.slice(-15) + ")" : "MISSING",
+            GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "Set (length: " + process.env.GOOGLE_CLIENT_SECRET.length + ")" : "MISSING",
         },
         database: {
             status: "Checking...",

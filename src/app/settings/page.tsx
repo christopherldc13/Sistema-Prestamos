@@ -222,7 +222,7 @@ export default function SettingsPage() {
     return (
         <div className="settings-wrapper">
             <header className="settings-header">
-                <Link href="/" className="btn-back-minimal">
+                <Link href="/dashboard" className="btn-back-minimal">
                     <ArrowLeft size={16} /> Volver al Inicio
                 </Link>
                 <div className="header-text">

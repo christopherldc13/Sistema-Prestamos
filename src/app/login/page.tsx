@@ -51,7 +51,7 @@ export default function LoginPage() {
     const handleGoogleSignIn = async () => {
         setGoogleLoading(true);
         setError("");
-        await signIn("google", { callbackUrl: "/" });
+        await signIn("google", { callbackUrl: "/dashboard" });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +75,7 @@ export default function LoginPage() {
                 triggerShake();
                 setLoading(false);
             } else {
-                router.push("/");
+                router.push("/dashboard");
             }
         } catch {
             setError("Error de conexión. Intenta nuevamente.");
