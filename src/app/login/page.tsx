@@ -113,7 +113,7 @@ export default function LoginPage() {
                         ))}
                     </ul>
                 </div>
-                <p className="brand-panel-footer">© 2026 Fact-Prest System</p>
+                <p className="brand-panel-footer">© 2026 Fact-Prest System — Todos los derechos reservados a Christopher Lantigua De la Cruz</p>
             </div>
 
             {/* ── Right form panel ── */}
@@ -241,7 +241,7 @@ export default function LoginPage() {
                         )}
                     </button>
 
-                    <p className="login-footer">© 2026 Fact-Prest System</p>
+                    <p className="login-footer">© 2026 Fact-Prest System — Todos los derechos reservados a Christopher Lantigua De la Cruz</p>
                 </motion.div>
             </div>
 

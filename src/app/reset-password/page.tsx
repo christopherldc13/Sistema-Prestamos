@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
                     </>
                 )}
 
-                <p className="login-footer">© 2026 Fact-Prest System</p>
+                <p className="login-footer">© 2026 Fact-Prest System — Todos los derechos reservados a Christopher Lantigua De la Cruz</p>
             </motion.div>
 
             <style dangerouslySetInnerHTML={{

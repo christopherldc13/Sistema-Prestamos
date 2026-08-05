@@ -201,7 +201,7 @@ export default function LandingPage() {
             </main>
 
             <footer className="landing-footer">
-                <p>© 2026 Fact-Prest System</p>
+                <p>© 2026 Fact-Prest System — Todos los derechos reservados a Christopher Lantigua De la Cruz</p>
             </footer>
 
             <a
