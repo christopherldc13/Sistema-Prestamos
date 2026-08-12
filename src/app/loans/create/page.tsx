@@ -49,7 +49,11 @@ export default function CreateLoanPage() {
         termUnit: "months" as TermUnit,
         interestType: "simple" as InterestType,
         startDate: new Date().toISOString().split("T")[0],
+        guarantorName: "",
+        guarantorIdNumber: "",
+        guarantorPhone: "",
     });
+    const [showGuarantor, setShowGuarantor] = useState(false);
 
     useEffect(() => {
         fetch("/api/clients")
@@ -283,6 +287,54 @@ export default function CreateLoanPage() {
                             </p>
                         </section>
 
+                        {/* Fiador / Garante (opcional) */}
+                        <section className="form-section-block">
+                            <button
+                                type="button"
+                                className="guarantor-toggle"
+                                onClick={() => setShowGuarantor(v => !v)}
+                            >
+                                <h3 className="section-subtitle">Fiador / Garante <span className="optional-tag">Opcional</span></h3>
+                                <ChevronLeft size={16} className={`guarantor-chevron ${showGuarantor ? "open" : ""}`} />
+                            </button>
+                            {showGuarantor && (
+                                <div className="guarantor-fields">
+                                    <div className="field-group-pro">
+                                        <label><User size={14} /> Nombre completo</label>
+                                        <input
+                                            type="text"
+                                            className="input-pro-text"
+                                            placeholder="Nombre del fiador"
+                                            value={formData.guarantorName}
+                                            onChange={e => setFormData({ ...formData, guarantorName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-row-adaptive">
+                                        <div className="field-group-pro">
+                                            <label>Cédula</label>
+                                            <input
+                                                type="text"
+                                                className="input-pro-text"
+                                                placeholder="000-0000000-0"
+                                                value={formData.guarantorIdNumber}
+                                                onChange={e => setFormData({ ...formData, guarantorIdNumber: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="field-group-pro">
+                                            <label>Teléfono</label>
+                                            <input
+                                                type="text"
+                                                className="input-pro-text"
+                                                placeholder="809-000-0000"
+                                                value={formData.guarantorPhone}
+                                                onChange={e => setFormData({ ...formData, guarantorPhone: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+
                         <button type="submit" className="btn-submit-loan" disabled={isSubmitting}>
                             {isSubmitting ? "Procesando..." : "Crear Préstamo Ahora"}
                             {!isSubmitting && <CheckCircle2 size={18} />}
@@ -447,6 +499,13 @@ export default function CreateLoanPage() {
         .chevron-down-abs { position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%) rotate(-90deg); color: var(--text-faint); pointer-events: none; }
 
         .form-row-adaptive { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+        .guarantor-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; cursor: pointer; padding: 0; margin-bottom: 0; }
+        .guarantor-toggle .section-subtitle { margin-bottom: 0; }
+        .optional-tag { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-very-faint); }
+        .guarantor-chevron { transform: rotate(-90deg); transition: transform 0.2s; color: var(--text-faint); flex-shrink: 0; }
+        .guarantor-chevron.open { transform: rotate(90deg); }
+        .guarantor-fields { margin-top: 1.5rem; }
 
         .input-with-symbol { position: relative; width: 100%; }
         .input-with-symbol .symbol { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-faint); font-weight: 700; }

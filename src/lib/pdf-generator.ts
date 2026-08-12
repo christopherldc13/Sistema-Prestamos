@@ -85,6 +85,64 @@ const fmtDate = (d: Date | string, locale = "es-DO") =>
 const fmtDateLong = (d: Date | string) =>
     new Date(d).toLocaleDateString("es-DO", { day: "2-digit", month: "long", year: "numeric" });
 
+/** Fecha larga en letras, ej: "a los 23 (23) días del mes de julio del año dos mil veintiséis (2026)" */
+const fnDateLongTexts = (d: Date) => {
+    const unidades = ['cero', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiún', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve', 'treinta', 'treinta y un'];
+    const num2text = (num: number) => {
+        if (num <= 31) return unidades[num];
+        const yrs: Record<number, string> = { 2024: "dos mil veinticuatro", 2025: "dos mil veinticinco", 2026: "dos mil veintiséis", 2027: "dos mil veintisiete", 2028: "dos mil veintiocho", 2029: "dos mil veintinueve", 2030: "dos mil treinta" };
+        return yrs[num] || num.toString();
+    };
+    return `a los ${num2text(d.getDate())} (${d.getDate()}) días del mes de ${d.toLocaleDateString("es-DO", { month: "long" })} del año ${num2text(d.getFullYear())} (${d.getFullYear()})`;
+};
+
+/** Convierte un monto en pesos a su expresión en letras (formato legal dominicano) */
+const numberToWordsES = (n: number): string => {
+    if (n === 0) return "cero";
+    const UNIDADES = ["", "un", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+    const DIEZ_A_DIECINUEVE = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
+    const VEINTIALGO = ["veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"];
+    const DECENAS = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+    const CENTENAS = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+
+    const threeDigits = (num: number): string => {
+        if (num === 0) return "";
+        if (num === 100) return "cien";
+        let str = "";
+        const c = Math.floor(num / 100);
+        const r = num % 100;
+        if (c > 0) str += CENTENAS[c] + " ";
+        if (r > 0) {
+            if (r < 10) str += UNIDADES[r];
+            else if (r < 20) str += DIEZ_A_DIECINUEVE[r - 10];
+            else if (r < 30) str += VEINTIALGO[r - 20];
+            else {
+                const d10 = Math.floor(r / 10), u = r % 10;
+                str += DECENAS[d10];
+                if (u > 0) str += " y " + UNIDADES[u];
+            }
+        }
+        return str.trim();
+    };
+
+    n = Math.floor(n);
+    const millones = Math.floor(n / 1_000_000);
+    const miles = Math.floor((n % 1_000_000) / 1000);
+    const resto = n % 1000;
+    const parts: string[] = [];
+    if (millones > 0) parts.push(millones === 1 ? "un millón" : `${threeDigits(millones)} millones`);
+    if (miles > 0) parts.push(miles === 1 ? "mil" : `${threeDigits(miles)} mil`);
+    if (resto > 0) parts.push(threeDigits(resto));
+    return parts.join(" ").trim() || "cero";
+};
+
+/** Monto en letras con formato legal: "CINCO MIL PESOS DOMINICANOS CON 00/100 (RD$ 5,000.00)" */
+const amountToWordsRD = (amount: number): string => {
+    const pesos = Math.floor(amount);
+    const centavos = Math.round((amount - pesos) * 100);
+    return `${numberToWordsES(pesos).toUpperCase()} PESOS DOMINICANOS CON ${String(centavos).padStart(2, "0")}/100 (RD$ ${fmt(amount)})`;
+};
+
 /** Hash-based sequential code (7 digits) */
 const seqNo = (prefix: string, id: string) => {
     let num = 0;
@@ -285,20 +343,15 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     doc.setTextColor(30, 30, 30);
     doc.setLineHeightFactor(1.5);
 
-    const fnDateLongTexts = (d: Date) => {
-        const unidades = ['cero', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiún', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve', 'treinta', 'treinta y un'];
-        const num2text = (num: number) => {
-            if (num <= 31) return unidades[num];
-            const yrs: Record<number, string> = { 2024: "dos mil veinticuatro", 2025: "dos mil veinticinco", 2026: "dos mil veintiséis", 2027: "dos mil veintisiete", 2028: "dos mil veintiocho", 2029: "dos mil veintinueve", 2030: "dos mil treinta" };
-            return yrs[num] || num.toString();
-        };
-        return `a los ${num2text(d.getDate())} (${d.getDate()}) días del mes de ${d.toLocaleDateString("es-DO", {month: "long"})} del año ${num2text(d.getFullYear())} (${d.getFullYear()})`;
-    };
+    const hasGuarantor = !!loan.guarantorName;
 
     const parts = [
         `En la ciudad de La Vega, República Dominicana, ${fnDateLongTexts(today)}, comparecen ante este instrumento:`,
         `De una parte, el/la señor/a ${config.name.toUpperCase()}, mayor de edad, con domicilio en ${config.address}, quien en lo sucesivo se denominará EL/LA ACREEDOR/A.`,
         `De otra parte, el/la Señor/a ${loan.client.fullName.toUpperCase()}, dominicano/a, mayor de edad, portador/a de la cédula de identidad No. ${loan.client.idNumber}, con domicilio en ${loan.client.address || "dirección indicada"}, quien en adelante se denominará EL/LA DEUDOR/A.`,
+        ...(hasGuarantor ? [
+            `Interviene además, en calidad de fiador solidario, el/la Señor/a ${loan.guarantorName.toUpperCase()}${loan.guarantorIdNumber ? `, portador/a de la cédula de identidad No. ${loan.guarantorIdNumber}` : ""}, quien en lo adelante se denominará EL/LA FIADOR/A, y quien se obliga solidariamente con EL/LA DEUDOR/A al cumplimiento de todas las obligaciones contraídas en el presente contrato.`,
+        ] : []),
         `Ambas partes, libre y voluntariamente, convienen en celebrar el presente CONTRATO DE PRÉSTAMO, el cual se regirá por las estipulaciones siguientes:`,
     ];
 
@@ -367,7 +420,7 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     }
 
     // ── Signature Block ──────────────────────────────────────
-    if (y > 240) { doc.addPage(); y = 25; }
+    if (y > (hasGuarantor ? 218 : 240)) { doc.addPage(); y = 25; }
     y += 8;
 
     doc.setFont("times", "normal");
@@ -407,6 +460,23 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     doc.setTextColor(100, 100, 100);
     doc.text(`EL/LA DEUDOR/A — Cédula: ${loan.client.idNumber}`, A4_R - sigLW / 2, y + 10, { align: "center" });
 
+    // Fiador signature (si aplica)
+    if (hasGuarantor) {
+        const fy = y + 22;
+        const fx = 105 - sigLW / 2;
+        doc.setDrawColor(40, 40, 40);
+        doc.setLineWidth(0.4);
+        doc.line(fx, fy, fx + sigLW, fy);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(20, 20, 20);
+        doc.text(loan.guarantorName.toUpperCase(), 105, fy + 5.5, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`EL/LA FIADOR/A${loan.guarantorIdNumber ? ` — Cédula: ${loan.guarantorIdNumber}` : ""}`, 105, fy + 10, { align: "center" });
+    }
+
     // ── Footer ───────────────────────────────────────────────
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
@@ -423,6 +493,149 @@ export const generateLoanReceipt = (loan: any, config: CompanyConfig = DEFAULT_C
     handlePdfOutput(doc, `Contrato_${loan.client.fullName.replace(/\s+/g, "_")}_${loanNo}.pdf`);
 };
 
+// ============================================================
+//  1B. PAGARÉ NOTARIAL — A4
+// ============================================================
+export const generatePromissoryNote = (loan: any, config: CompanyConfig = DEFAULT_COMPANY) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const today = new Date();
+    const loanNo = seqNo("PG", loan.id);
+    const dueDate: Date = loan.dueDate
+        ? new Date(loan.dueDate)
+        : calcDueDate(new Date(loan.startDate), loan.term, loan.termUnit);
+    const hasGuarantor = !!loan.guarantorName;
+
+    let y = 16;
+
+    // ── Header (mismo estilo minimalista que el contrato) ─────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
+    doc.text(config.brand.toUpperCase(), 105, y, { align: "center" });
+    doc.setTextColor(0, 0, 0);
+
+    y += 10;
+    doc.setFont("times", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(20, 20, 20);
+    doc.text(config.name.toUpperCase(), 105, y, { align: "center" });
+
+    y += 7;
+    doc.setFont("times", "italic");
+    doc.setFontSize(10);
+    doc.setTextColor(90, 90, 90);
+    doc.text(config.slogan, 105, y, { align: "center" });
+
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(110, 110, 110);
+    doc.text(`${config.address}  ·  Tel. ${config.phone}`, 105, y, { align: "center" });
+
+    y += 6;
+    a4ColorLine(doc, y, 60, 60, 60, 0.6);
+
+    // ── Título ──────────────────────────────────────────────
+    y += 12;
+    doc.setFont("times", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(20, 20, 20);
+    doc.text("PAGARÉ", 105, y, { align: "center" });
+
+    y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`No. ${loanNo}  ·  Emitido: ${fmtDateLong(today)}`, 105, y, { align: "center" });
+
+    // ── Monto destacado ─────────────────────────────────────
+    y += 12;
+    doc.setFillColor(246, 246, 246);
+    doc.setDrawColor(215, 215, 215);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(A4_L, y, A4_CW, 16, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(20, 20, 20);
+    doc.text(`RD$ ${fmt(loan.amount)}`, 105, y + 10, { align: "center" });
+
+    y += 26;
+
+    // ── Cuerpo ──────────────────────────────────────────────
+    doc.setFont("times", "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(30, 30, 30);
+    doc.setLineHeightFactor(1.5);
+
+    const paragraphs = [
+        `Por el presente PAGARÉ, sin protesto, YO, ${loan.client.fullName.toUpperCase()}, dominicano/a, mayor de edad, portador/a de la cédula de identidad No. ${loan.client.idNumber}, con domicilio en ${loan.client.address || "dirección indicada"}, prometo pagar incondicionalmente a la orden de ${config.name.toUpperCase()}, o a quien sus derechos represente, en la ciudad de La Vega, República Dominicana, la cantidad de ${amountToWordsRD(loan.amount)}, el día ${fmtDateLong(dueDate)}, sin necesidad de requerimiento, protesto ni diligencia judicial alguna, a los cuales renuncio expresamente.`,
+        `Esta obligación devengará un interés del ${loan.interestRate}% ${rateFreqLabel(loan.rateFrequency || "monthly").toLowerCase()} hasta su total y completo pago. En caso de incumplimiento en la fecha de vencimiento indicada, la suma adeudada generará adicionalmente el cargo moratorio establecido, y EL/LA DEUDOR/A se obliga a cubrir los gastos de cobranza, honorarios legales y costas judiciales derivados del cobro compulsivo de esta obligación.`,
+        ...(hasGuarantor ? [
+            `Sirve de fiador solidario y principal pagador del presente pagaré el/la Sr(a). ${loan.guarantorName.toUpperCase()}${loan.guarantorIdNumber ? `, portador/a de la cédula de identidad No. ${loan.guarantorIdNumber}` : ""}, quien mediante su firma se obliga en las mismas condiciones que EL/LA DEUDOR/A, renunciando expresamente a los beneficios de excusión y división.`,
+        ] : []),
+    ];
+
+    for (const para of paragraphs) {
+        if (y > 250) { doc.addPage(); y = 25; }
+        const lines = doc.splitTextToSize(para, A4_CW);
+        doc.text(para, A4_L, y, { align: "justify", maxWidth: A4_CW });
+        y += lines.length * 5.8 + 6;
+    }
+
+    // ── Lugar y fecha ───────────────────────────────────────
+    if (y > 240) { doc.addPage(); y = 25; }
+    y += 4;
+    const placeText = `En la ciudad de La Vega, República Dominicana, ${fnDateLongTexts(today)}.`;
+    const placeLines = doc.splitTextToSize(placeText, A4_CW);
+    doc.text(placeText, A4_L, y, { align: "justify", maxWidth: A4_CW });
+    y += placeLines.length * 5.8;
+
+    // ── Firmas ──────────────────────────────────────────────
+    y += (hasGuarantor ? 24 : 28);
+    const sigLW = 70;
+    const sx = 105 - sigLW / 2;
+    doc.setDrawColor(40, 40, 40);
+    doc.setLineWidth(0.4);
+    doc.line(sx, y, sx + sigLW, y);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(20, 20, 20);
+    doc.text(loan.client.fullName.toUpperCase(), 105, y + 5.5, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`EL/LA DEUDOR/A — Cédula: ${loan.client.idNumber}`, 105, y + 10, { align: "center" });
+
+    if (hasGuarantor) {
+        const fy = y + 24;
+        doc.setDrawColor(40, 40, 40);
+        doc.setLineWidth(0.4);
+        doc.line(sx, fy, sx + sigLW, fy);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(20, 20, 20);
+        doc.text(loan.guarantorName.toUpperCase(), 105, fy + 5.5, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`EL/LA FIADOR/A${loan.guarantorIdNumber ? ` — Cédula: ${loan.guarantorIdNumber}` : ""}`, 105, fy + 10, { align: "center" });
+    }
+
+    // ── Footer ──────────────────────────────────────────────
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFillColor(247, 247, 247);
+        doc.rect(0, 285, 210, 12, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`${config.name} · ${config.address} · Tel. ${config.phone}`, 105, 290, { align: "center" });
+        doc.text(`Pagaré No. ${loanNo} · Página ${i} de ${pageCount}`, 105, 294, { align: "center" });
+    }
+
+    handlePdfOutput(doc, `Pagare_${loan.client.fullName.replace(/\s+/g, "_")}_${loanNo}.pdf`);
+};
 
 // ============================================================
 //  2. PAYMENT RECEIPT — Ticket Térmico 80 mm

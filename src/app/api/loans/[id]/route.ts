@@ -34,7 +34,7 @@ export async function GET(
         loanAny.daysOverdue = 0;
         loanAny.accumulatedLateFee = 0;
 
-        if (loan.status !== "paid") {
+        if (loan.status !== "paid" && loan.status !== "refinanced") {
             const settings = await prisma.settings.findUnique({ where: { userId } });
             const lateFeeRules = (settings?.value as any)?.lateFeeRules || [];
             const schedule = (loan.paymentSchedule as any[]) || [];
@@ -53,5 +53,36 @@ export async function GET(
         return NextResponse.json(loan);
     } catch (error) {
         return NextResponse.json({ error: "Error al obtener el préstamo" }, { status: 500 });
+    }
+}
+
+export async function PATCH(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+        }
+
+        const userId = (session.user as any).id;
+        const existing = await prisma.loan.findUnique({ where: { id: params.id } });
+        if (!existing || existing.userId !== userId) {
+            return NextResponse.json({ error: "Préstamo no encontrado o inaccesible" }, { status: 404 });
+        }
+
+        const body = await req.json();
+        const data: any = {};
+        if (body.status !== undefined) data.status = body.status;
+
+        if (Object.keys(data).length === 0) {
+            return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
+        }
+
+        const loan = await prisma.loan.update({ where: { id: params.id }, data });
+        return NextResponse.json(loan);
+    } catch (error) {
+        return NextResponse.json({ error: "Error al actualizar el préstamo" }, { status: 500 });
     }
 }

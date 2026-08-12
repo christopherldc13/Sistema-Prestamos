@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
     CreditCard, Search, Filter, ArrowRight,
     CheckCircle2, AlertCircle, Clock, MoreVertical,
-    ChevronRight, Calendar, User, DollarSign, X
+    ChevronRight, Calendar, User, DollarSign, X, RefreshCw
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -81,6 +81,7 @@ export default function LoansPage() {
                         <option value="active">🟢 Préstamos Activos</option>
                         <option value="paid">🔵 Préstamos Saldados</option>
                         <option value="overdue">🔴 Préstamos Atrasados</option>
+                        <option value="refinanced">⚪ Refinanciados</option>
                     </select>
                 </div>
             </div>
@@ -157,9 +158,11 @@ export default function LoansPage() {
                                                     {loan.status === 'active' && <Clock size={12} />}
                                                     {loan.status === 'paid' && <CheckCircle2 size={12} />}
                                                     {loan.status === 'overdue' && <AlertCircle size={12} />}
-                                                    {loan.status === 'active' ? 'Activo' : 
-                                                     loan.status === 'paid' ? 'Pagado' : 
-                                                     loan.status === 'overdue' ? 'Vencido' : loan.status}
+                                                    {loan.status === 'refinanced' && <RefreshCw size={12} />}
+                                                    {loan.status === 'active' ? 'Activo' :
+                                                     loan.status === 'paid' ? 'Pagado' :
+                                                     loan.status === 'overdue' ? 'Vencido' :
+                                                     loan.status === 'refinanced' ? 'Refinanciado' : loan.status}
                                                 </span>
                                             </td>
                                             <td className="text-right">
@@ -191,9 +194,11 @@ export default function LoansPage() {
                                                 {loan.status === 'active' && <Clock size={12} />}
                                                 {loan.status === 'paid' && <CheckCircle2 size={12} />}
                                                 {loan.status === 'overdue' && <AlertCircle size={12} />}
+                                                {loan.status === 'refinanced' && <RefreshCw size={12} />}
                                                 {loan.status === 'active' ? 'Activo' :
                                                  loan.status === 'paid' ? 'Pagado' :
-                                                 loan.status === 'overdue' ? 'Vencido' : loan.status}
+                                                 loan.status === 'overdue' ? 'Vencido' :
+                                                 loan.status === 'refinanced' ? 'Refinanciado' : loan.status}
                                             </span>
                                         </div>
 
@@ -303,6 +308,7 @@ export default function LoansPage() {
         .status-pill.active { background: rgba(99, 102, 241, 0.1); color: #818cf8; }
         .status-pill.paid { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-pill.overdue { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
+        .status-pill.refinanced { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
 
         .btn-go-details { background: rgba(var(--edge-rgb), 0.05); color: #6366f1; border: none; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
         .btn-go-details:hover { background: rgba(99, 102, 241, 0.1); }

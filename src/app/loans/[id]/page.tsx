@@ -12,10 +12,11 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { generateLoanReceipt, generatePaymentReceipt, generateAccountStatement, getPaymentReceiptDetails, CompanyConfig } from "@/lib/pdf-generator";
+import { generateLoanReceipt, generatePromissoryNote, generatePaymentReceipt, generateAccountStatement, getPaymentReceiptDetails, CompanyConfig } from "@/lib/pdf-generator";
 import { useUserPlan } from "@/components/UserPlanProvider";
-import { Lock, Zap } from "lucide-react";
+import { Lock, Zap, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { RateFrequency, TermUnit } from "@/lib/loan-calculator";
 
 type AmortRow = {
     installmentNumber: number;
@@ -45,6 +46,15 @@ export default function LoanDetailsPage() {
         date: new Date().toISOString().split("T")[0],
     });
     const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const [isRefinanceModalOpen, setIsRefinanceModalOpen] = useState(false);
+    const [refinanceForm, setRefinanceForm] = useState({
+        amount: "",
+        interestRate: "",
+        rateFrequency: "monthly" as RateFrequency,
+        term: "",
+        termUnit: "months" as TermUnit,
+    });
 
     const copyField = (text: string, key: string) => {
         navigator.clipboard.writeText(text).then(() => {
@@ -118,6 +128,62 @@ export default function LoanDetailsPage() {
         finally { setIsSubmitting(false); }
     };
 
+    const openRefinanceModal = () => {
+        setRefinanceForm({
+            amount: String(Math.round((loan.remainingBalance + accumulatedLateFee) * 100) / 100),
+            interestRate: String(loan.interestRate),
+            rateFrequency: loan.rateFrequency as RateFrequency,
+            term: String(loan.term),
+            termUnit: loan.termUnit as TermUnit,
+        });
+        setIsRefinanceModalOpen(true);
+    };
+
+    const handleRefinance = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const amt = parseFloat(refinanceForm.amount);
+        const rate = parseFloat(refinanceForm.interestRate);
+        const term = parseInt(refinanceForm.term);
+        if (isNaN(amt) || amt <= 0) return alert("Ingrese un monto válido.");
+        if (isNaN(rate) || rate <= 0) return alert("Ingrese una tasa de interés válida.");
+        if (isNaN(term) || term <= 0) return alert("Ingrese un plazo válido.");
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch("/api/loans", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    clientId: loan.clientId,
+                    amount: amt,
+                    interestRate: rate,
+                    rateFrequency: refinanceForm.rateFrequency,
+                    term,
+                    termUnit: refinanceForm.termUnit,
+                    interestType: loan.interestType,
+                    startDate: new Date().toISOString().split("T")[0],
+                    refinancedFromLoanId: loan.id,
+                }),
+            });
+            if (res.ok) {
+                const newLoan = await res.json();
+                await fetch(`/api/loans/${loan.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "refinanced" }),
+                });
+                router.push(`/loans/${newLoan.id}`);
+            } else {
+                const err = await res.json();
+                alert(err.error || "Error al refinanciar el préstamo");
+                setIsSubmitting(false);
+            }
+        } catch {
+            alert("Error de conexión");
+            setIsSubmitting(false);
+        }
+    };
+
     // Derivar información financiera del préstamo
     const schedule: AmortRow[] = useMemo(() => {
         if (!loan?.paymentSchedule) return [];
@@ -162,6 +228,23 @@ export default function LoanDetailsPage() {
     const fmtCurrency = (n: number) =>
         n.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const buildWhatsAppLink = (phone: string, message: string) => {
+        const digits = (phone || "").replace(/\D/g, "");
+        const withCountry = digits.length === 10 ? `1${digits}` : digits;
+        return `https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`;
+    };
+
+    const reminderMessage = useMemo(() => {
+        if (!loan || !nextInstallment) return "";
+        const amount = fmtCurrency(nextInstallment.totalPayment + accumulatedLateFee);
+        const senderName = companyConfig?.name || "Fact-Prest";
+        if (loan.status === "overdue") {
+            return `Hola ${loan.client.fullName}, te recordamos que tienes una cuota vencida de RD$${amount} pendiente de pago. Por favor ponte al día lo antes posible. ¡Gracias! — ${senderName}`;
+        }
+        const dueDateLabel = new Date(nextInstallment.dueDate + "T12:00:00").toLocaleDateString("es-DO", { day: "2-digit", month: "long" });
+        return `Hola ${loan.client.fullName}, te recordamos que tu próxima cuota de RD$${amount} vence el ${dueDateLabel}. ¡Gracias! — ${senderName}`;
+    }, [loan, nextInstallment, accumulatedLateFee, companyConfig]);
+
     if (loading) return (
         <div className="state-screen">
             <div className="spinner-pro"></div>
@@ -202,9 +285,11 @@ export default function LoanDetailsPage() {
                             {loan.status === "active" && <Clock size={14} />}
                             {loan.status === "paid" && <CheckCircle2 size={14} />}
                             {loan.status === "overdue" && <AlertCircle size={14} />}
+                            {loan.status === "refinanced" && <RefreshCw size={14} />}
                             <span>
                                 {loan.status === "active" ? "Activo" :
                                  loan.status === "paid" ? "Pagado" :
+                                 loan.status === "refinanced" ? "Refinanciado" :
                                  loan.status === "overdue" ? `En Mora · ${daysOverdue} día${daysOverdue !== 1 ? "s" : ""}` : loan.status}
                             </span>
                         </div>
@@ -240,9 +325,26 @@ export default function LoanDetailsPage() {
                                     </span>
                                 </div>
                             </div>
-                            <div className="next-amount">
-                                ${fmtCurrency(nextInstallment.totalPayment)}
-                                {accumulatedLateFee > 0 && <span style={{display:"block", fontSize:"0.75rem", color:"#f43f5e", marginTop:"4px"}}>+ ${fmtCurrency(accumulatedLateFee)} de mora</span>}
+                            <div className="next-pay-right">
+                                <div className="next-amount">
+                                    ${fmtCurrency(nextInstallment.totalPayment)}
+                                    {accumulatedLateFee > 0 && <span style={{display:"block", fontSize:"0.75rem", color:"#f43f5e", marginTop:"4px"}}>+ ${fmtCurrency(accumulatedLateFee)} de mora</span>}
+                                </div>
+                                {loan.client.phone && (
+                                    <a
+                                        href={buildWhatsAppLink(loan.client.phone, reminderMessage)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="whatsapp-reminder-btn"
+                                        title="Enviar recordatorio por WhatsApp"
+                                    >
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                                            <path d="M12.001 2C6.478 2 2 6.477 2 12c0 1.876.517 3.632 1.415 5.134L2 22l4.995-1.386A9.945 9.945 0 0 0 12.001 22C17.524 22 22 17.523 22 12S17.524 2 12.001 2zm0 18.166a8.13 8.13 0 0 1-4.146-1.136l-.297-.176-3.098.86.826-3.02-.193-.31A8.13 8.13 0 0 1 3.834 12c0-4.5 3.665-8.166 8.167-8.166 4.5 0 8.166 3.665 8.166 8.166 0 4.502-3.665 8.166-8.166 8.166z"/>
+                                        </svg>
+                                        <span>Recordar</span>
+                                    </a>
+                                )}
                             </div>
                         </div>
                     )}
@@ -256,7 +358,7 @@ export default function LoanDetailsPage() {
                                 }
                                 setIsPaymentModalOpen(true);
                             }}
-                            disabled={loan.status === "paid"}
+                            disabled={loan.status === "paid" || loan.status === "refinanced"}
                         >
                             <PlusCircle size={18} />
                             <span>Registrar Abono</span>
@@ -275,6 +377,19 @@ export default function LoanDetailsPage() {
                             </button>
                         )}
 
+                        {plan.hasContractPDF ? (
+                            <button className="btn-download-pro" onClick={() => generatePromissoryNote(loan, companyConfig)}>
+                                <FileText size={18} />
+                                <span>Pagaré PDF</span>
+                            </button>
+                        ) : (
+                            <button className="btn-locked-action" onClick={() => router.push("/plans")} title="Disponible desde Plan Intermedio">
+                                <Lock size={16} />
+                                <span>Pagaré PDF</span>
+                                <span className="lock-plan-badge">Intermedio</span>
+                            </button>
+                        )}
+
                         {plan.hasStatementPDF ? (
                             <button className="btn-download-pro" onClick={() => generateAccountStatement(loan, companyConfig)}>
                                 <BookOpen size={18} />
@@ -285,6 +400,13 @@ export default function LoanDetailsPage() {
                                 <Lock size={16} />
                                 <span>Estado de Cuenta</span>
                                 <span className="lock-plan-badge">Intermedio</span>
+                            </button>
+                        )}
+
+                        {(loan.status === "active" || loan.status === "overdue") && (
+                            <button className="btn-download-pro" onClick={openRefinanceModal}>
+                                <RefreshCw size={18} />
+                                <span>Refinanciar</span>
                             </button>
                         )}
                     </div>
@@ -366,6 +488,11 @@ export default function LoanDetailsPage() {
                             loan.termUnit === "weeks" ? "semanas" : "días"
                         }</span>
                         <span className="detail-pill">{loan.interestType === "simple" ? "Simple" : "Francés"}</span>
+                        {loan.guarantorName && (
+                            <span className="detail-pill detail-pill-guarantor" title={[loan.guarantorIdNumber, loan.guarantorPhone].filter(Boolean).join(" · ")}>
+                                <ShieldAlert size={11} /> Fiador: {loan.guarantorName}
+                            </span>
+                        )}
                     </div>
                 </motion.aside>
             </div>
@@ -805,6 +932,104 @@ export default function LoanDetailsPage() {
                 )}
             </AnimatePresence>
 
+            {/* Modal: Refinanciar Préstamo */}
+            <AnimatePresence>
+                {isRefinanceModalOpen && (
+                    <div className="modal-root">
+                        <motion.div
+                            initial={{ backdropFilter: "blur(0px)", backgroundColor: "rgba(0,0,0,0)" }}
+                            animate={{ backdropFilter: "blur(4px)", backgroundColor: "rgba(0,0,0,0.7)" }}
+                            exit={{ backdropFilter: "blur(0px)", backgroundColor: "rgba(0,0,0,0)" }}
+                            className="modal-overlay-new"
+                            onClick={() => setIsRefinanceModalOpen(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="glass-card modal-content-premium"
+                        >
+                            <header className="modal-header-pro">
+                                <div>
+                                    <h3>Refinanciar Préstamo</h3>
+                                    <p>El saldo pendiente se convierte en un préstamo nuevo con las condiciones que definas</p>
+                                </div>
+                                <button className="btn-close-modal" onClick={() => setIsRefinanceModalOpen(false)}><X size={20} /></button>
+                            </header>
+
+                            <div className="mora-mandatory-notice" style={{ borderColor: "rgba(99,102,241,0.25)", background: "rgba(99,102,241,0.08)" }}>
+                                <AlertCircle size={14} />
+                                <span>El préstamo actual (saldo: ${fmtCurrency(loan.remainingBalance + accumulatedLateFee)}) quedará marcado como "Refinanciado" y se creará uno nuevo para {loan.client.fullName}.</span>
+                            </div>
+
+                            <form onSubmit={handleRefinance} className="modal-form-pro">
+                                <div className="field-group-modal">
+                                    <label>Nuevo Monto ($)</label>
+                                    <input
+                                        type="text"
+                                        className="input-pro-modal"
+                                        required
+                                        value={refinanceForm.amount}
+                                        onChange={e => setRefinanceForm({ ...refinanceForm, amount: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-row-modal">
+                                    <div className="field-group-modal">
+                                        <label>Tasa de Interés (%)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="input-pro-modal"
+                                            required
+                                            value={refinanceForm.interestRate}
+                                            onChange={e => setRefinanceForm({ ...refinanceForm, interestRate: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="field-group-modal">
+                                        <label>Frecuencia</label>
+                                        <select className="select-pro-modal" value={refinanceForm.rateFrequency} onChange={e => setRefinanceForm({ ...refinanceForm, rateFrequency: e.target.value as RateFrequency })}>
+                                            <option value="daily">Diaria</option>
+                                            <option value="weekly">Semanal</option>
+                                            <option value="biweekly">Quincenal</option>
+                                            <option value="monthly">Mensual</option>
+                                            <option value="annual">Anual</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="form-row-modal">
+                                    <div className="field-group-modal">
+                                        <label>Plazo</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="input-pro-modal"
+                                            required
+                                            value={refinanceForm.term}
+                                            onChange={e => setRefinanceForm({ ...refinanceForm, term: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="field-group-modal">
+                                        <label>Unidad</label>
+                                        <select className="select-pro-modal" value={refinanceForm.termUnit} onChange={e => setRefinanceForm({ ...refinanceForm, termUnit: e.target.value as TermUnit })}>
+                                            <option value="days">Días</option>
+                                            <option value="weeks">Semanas</option>
+                                            <option value="biweekly">Quincenas</option>
+                                            <option value="months">Meses</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="submit" className="btn-pay-pro" disabled={isSubmitting}>
+                                    {isSubmitting ? "Procesando..." : "Confirmar Refinanciamiento"}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             {/* Modal: Ver Detalles del Recibo */}
             <AnimatePresence>
                 {viewingPayment && (() => {
@@ -924,6 +1149,7 @@ export default function LoanDetailsPage() {
         .status-pill-pro.active { background: rgba(99,102,241,0.1); color: #818cf8; }
         .status-pill-pro.paid { background: rgba(16,185,129,0.1); color: #10b981; }
         .status-pill-pro.overdue { background: rgba(244,63,94,0.1); color: #f43f5e; }
+        .status-pill-pro.refinanced { background: rgba(148,163,184,0.12); color: #94a3b8; }
 
         .progress-visualization { margin-bottom: 1.5rem; }
         .progress-labels { display: flex; justify-content: space-between; margin-bottom: 0.75rem; }
@@ -940,6 +1166,9 @@ export default function LoanDetailsPage() {
         .next-label { display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
         .next-date { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
         .next-amount { font-size: 1.35rem; font-weight: 900; color: var(--text-main); }
+        .next-pay-right { display: flex; align-items: center; gap: 1rem; }
+        .whatsapp-reminder-btn { display: flex; align-items: center; gap: 0.4rem; background: #25d366; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 0.8rem; padding: 0.55rem 0.9rem; border-radius: 9px; transition: opacity 0.15s; flex-shrink: 0; }
+        .whatsapp-reminder-btn:hover { opacity: 0.88; }
 
         .main-actions-pro { display: flex; gap: 1.25rem; }
         .btn-pay-pro { background: #6366f1; color: white; border: none; padding: 0.9rem 1.75rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.2s; }
@@ -989,6 +1218,7 @@ export default function LoanDetailsPage() {
 
         .loan-detail-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
         .detail-pill { background: rgba(var(--edge-rgb), 0.04); border: 1px solid rgba(var(--edge-rgb), 0.07); color: var(--text-dim); font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 6px; }
+        .detail-pill-guarantor { display: inline-flex; align-items: center; gap: 0.3rem; }
 
         /* Amortization section */
         .amort-section { margin-bottom: 2.5rem; }
@@ -1151,6 +1381,8 @@ export default function LoanDetailsPage() {
           .client-name-title { font-size: 1.5rem; line-height: 1.2; }
           .h-title-group h2 { font-size: 1.25rem; }
           .b-value-big { font-size: 1.75rem; }
+          .next-payment-banner { flex-direction: column; align-items: flex-start; gap: 0.85rem; }
+          .next-pay-right { width: 100%; justify-content: space-between; }
         }
         @media (max-width: 480px) {
           .main-actions-pro { flex-direction: column; width: 100%; }

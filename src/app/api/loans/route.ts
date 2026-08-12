@@ -49,7 +49,7 @@ export async function GET() {
             let accumulatedLateFee = 0;
             let daysOverdue = 0;
 
-            if (status !== "paid") {
+            if (status !== "paid" && status !== "refinanced") {
                 const schedule = (paymentSchedule as any[]) || [];
                 const overdueInfo = getOverdueInfo(schedule, loan.totalToPay, loan.remainingBalance, loan.amount, lateFeeRules);
                 const newStatus = overdueInfo.isOverdue ? "overdue" : "active";
@@ -121,11 +121,23 @@ export async function POST(req: NextRequest) {
             term,
             termUnit,
             interestType,
-            startDate
+            startDate,
+            guarantorName,
+            guarantorIdNumber,
+            guarantorPhone,
+            refinancedFromLoanId,
         } = body;
 
         if (!clientId || !amount || !interestRate || !term || !termUnit) {
             return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
+        }
+
+        let validRefinanceSourceId: string | null = null;
+        if (refinancedFromLoanId) {
+            const sourceLoan = await prisma.loan.findUnique({ where: { id: refinancedFromLoanId } });
+            if (sourceLoan && sourceLoan.userId === userId) {
+                validRefinanceSourceId = refinancedFromLoanId;
+            }
         }
 
         const result = calculateLoan({
@@ -154,6 +166,10 @@ export async function POST(req: NextRequest) {
                 paymentSchedule: result.schedule as any,
                 clientId,
                 userId,
+                guarantorName: guarantorName || null,
+                guarantorIdNumber: guarantorIdNumber || null,
+                guarantorPhone: guarantorPhone || null,
+                refinancedFromLoanId: validRefinanceSourceId,
             },
         });
 

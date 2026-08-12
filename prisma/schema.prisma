@@ -65,7 +65,11 @@ model Loan {
   amount            Float
   interestRate      Float
   rateFrequency     String    @default("monthly") // "daily" | "weekly" | "biweekly" | "monthly" | "annual"
-  status            String    @default("active")  // "active", "paid", "overdue"
+  status            String    @default("active")  // "active", "paid", "overdue", "refinanced"
+  guarantorName     String?
+  guarantorIdNumber String?
+  guarantorPhone    String?
+  refinancedFromLoanId String? @db.ObjectId
   term              Int
   termUnit          String    // "days", "weeks", "months"
   interestType      String    // "simple", "compound"

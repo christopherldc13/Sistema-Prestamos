@@ -21,11 +21,55 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useUserPlan } from "@/components/UserPlanProvider";
 
+function csvField(value: any): string {
+    const str = String(value ?? "");
+    if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
+    return str;
+}
+
+const STATUS_LABEL: Record<string, string> = { active: "Activo", paid: "Pagado", overdue: "Vencido" };
+
 export default function ReportsPage() {
     const router = useRouter();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const { plan } = useUserPlan();
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const res = await fetch("/api/loans");
+            const loans = await res.json();
+            const headers = ["Cliente", "Monto Prestado", "Estado", "Cuota", "Total a Pagar", "Saldo Pendiente", "Fecha Creación", "Fecha Vencimiento", "Días Vencido", "Mora Acumulada"];
+            const rows = (Array.isArray(loans) ? loans : []).map((l: any) => [
+                l.client?.fullName ?? "",
+                l.amount,
+                STATUS_LABEL[l.status] ?? l.status,
+                l.installmentAmount,
+                l.totalToPay,
+                l.remainingBalance,
+                l.createdAt ? new Date(l.createdAt).toLocaleDateString("es-DO") : "",
+                l.dueDate ? new Date(l.dueDate).toLocaleDateString("es-DO") : "",
+                l.daysOverdue ?? 0,
+                l.accumulatedLateFee ?? 0,
+            ]);
+            const csvContent = [headers, ...rows].map(row => row.map(csvField).join(",")).join("\r\n");
+            const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Reporte_Prestamos_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Error exportando datos:", e);
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const fetchReports = async () => {
         setLoading(true);
@@ -69,8 +113,8 @@ export default function ReportsPage() {
                         <Filter size={16} /> <span>Filtrar Período</span>
                     </button>
                     {plan.hasExport ? (
-                        <button className="btn-export-premium">
-                            <Download size={16} /> <span>Exportar Data</span>
+                        <button className="btn-export-premium" onClick={handleExport} disabled={exporting}>
+                            <Download size={16} /> <span>{exporting ? "Exportando…" : "Exportar Data"}</span>
                         </button>
                     ) : (
                         <button className="btn-export-locked" onClick={() => router.push("/plans")} title="Disponible en Plan Premium">
@@ -265,6 +309,7 @@ export default function ReportsPage() {
                 .btn-filter-soft:hover { background: rgba(var(--edge-rgb), 0.06); color: var(--text-main); }
                 .btn-export-premium { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
                 .btn-export-premium:hover { transform: translateY(-2px); box-shadow: 0 15px 25px -5px rgba(99, 102, 241, 0.5); }
+                .btn-export-premium:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
                 .btn-export-locked { background: rgba(var(--edge-rgb), 0.04); color: var(--text-dim); border: 1px solid rgba(var(--edge-rgb), 0.08); padding: 0.75rem 1.25rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s; }
                 .btn-export-locked:hover { background: rgba(var(--edge-rgb), 0.07); color: var(--text-muted); }
                 .locked-badge { background: rgba(168,85,247,0.2); color: #c084fc; padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 800; }
